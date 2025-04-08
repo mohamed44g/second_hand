@@ -316,7 +316,6 @@ const ProductPage = () => {
           <Tabs value={value} onChange={handleChange} aria-label="product tabs">
             <Tab label="المواصفات" id="tab-0" />
             <Tab label="التقييمات" id="tab-1" />
-            <Tab label="أسئلة وأجوبة" id="tab-2" />
           </Tabs>
         </Box>
         <Box role="tabpanel" hidden={value !== 0} id="tabpanel-0" sx={{ py: 3 }}>
@@ -379,66 +378,6 @@ const ProductPage = () => {
                       />
                     </ListItem>
                     {item < 3 && <Divider variant="inset" component="li" />}
-                  </React.Fragment>
-                ))}
-              </List>
-            </Box>
-          )}
-        </Box>
-        <Box role="tabpanel" hidden={value !== 2} id="tabpanel-2" sx={{ py: 3 }}>
-          {value === 2 && (
-            <Box>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-                <Typography variant="h6" fontWeight="bold">
-                  أسئلة وأجوبة
-                </Typography>
-                <Button variant="outlined" size="small">
-                  طرح سؤال
-                </Button>
-              </Box>
-
-              <List sx={{ width: "100%", bgcolor: "background.paper" }}>
-                {[1, 2].map((item) => (
-                  <React.Fragment key={item}>
-                    <ListItem alignItems="flex-start">
-                      <ListItemAvatar>
-                        <Avatar src="/placeholder.svg?height=50&width=50" />
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                            <Typography variant="subtitle1" fontWeight="bold">
-                              سؤال {item}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              منذ {item + 2} أيام
-                            </Typography>
-                          </Box>
-                        }
-                        secondary={
-                          <Box sx={{ mt: 1 }}>
-                            <Typography variant="body2" color="text.primary" sx={{ mb: 2 }}>
-                              هل الجهاز يدعم تقنية الشحن السريع؟ وهل الشاحن الأصلي متوفر مع الجهاز؟
-                            </Typography>
-
-                            <Box sx={{ display: "flex", ml: 2, mt: 2 }}>
-                              <Avatar src={product.seller.image} sx={{ width: 32, height: 32, mr: 1 }} />
-                              <Box sx={{ bgcolor: "background.default", p: 1.5, borderRadius: 2, flex: 1 }}>
-                                <Typography variant="subtitle2" fontWeight="bold">
-                                  {product.seller.name}{" "}
-                                  <Chip label="البائع" size="small" color="primary" sx={{ ml: 1, height: 20 }} />
-                                </Typography>
-                                <Typography variant="body2">
-                                  نعم، الجهاز يدعم الشحن السريع بقوة 20 واط، والشاحن الأصلي متوفر مع الجهاز مع كابل
-                                  USB-C إلى Lightning.
-                                </Typography>
-                              </Box>
-                            </Box>
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                    {item < 2 && <Divider variant="inset" component="li" />}
                   </React.Fragment>
                 ))}
               </List>
