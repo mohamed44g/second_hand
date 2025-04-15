@@ -14,9 +14,22 @@ import ProductPage from "./pages/ProductPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import ProductsPage from "./pages/ProductsPage.jsx";
+import ProfilePage from "./pages/ProfilePage.jsx";
+import MyProductPage from "./pages/MyProductsPage.jsx";
+import WalletPage from "./pages/WalletPage.jsx";
+import MessagesPage from "./pages/MessagesPage.jsx";
+import ChatPage from "./pages/ChatPage.jsx";
+import CartPage from "./pages/CartPage.jsx";
+import SellerProfilePage from "./pages/SellerProfilePage.jsx";
 import Header from "./components/Header.jsx";
 import Footer from "./components/Footer.jsx";
-
+import OrdersPage from "./pages/OrdersPage.jsx";
+import AuctionsPage from "./pages/AuctionsPage.jsx";
+import AuctionDetailsPage from "./pages/AuctionDetailsPage.jsx";
+import CategoryPage from "./pages/CategoryPage.jsx";
+import DashboardPage from "./pages/admin/Dashboard.jsx";
+import AboutPage from "./pages/AboutPage.jsx";
+import ContactPage from "./pages/ContactPage.jsx";
 
 // RTL setup for Arabic
 const cacheRtl = createCache({
@@ -101,8 +114,26 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/product/:id" element={<ProductPage />} />
             <Route path="/products" element={<ProductsPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/wallet" element={<WalletPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/my-products" element={<MyProductPage />} />
+            <Route path="/messages" element={<MessagesPage />} />
+            <Route path="/chat/:id" element={<ChatPage />} />
+            <Route path="/cart" element={<CartPage />} />
+            <Route path="/seller/:id" element={<SellerProfilePage />} />
+            <Route path="/orders" element={<OrdersPage />} />
+            <Route path="/auctions" element={<AuctionsPage />} />
+            <Route path="/auction/:id" element={<AuctionDetailsPage />} />
+            <Route path="/category/:categoryId" element={<CategoryPage />} />
+            <Route
+              path="/category/:categoryId/:subcategoryId"
+              element={<CategoryPage />}
+            />
+            <Route path="/dashboard" element={<DashboardPage />} />
           </Routes>
           <Footer />
         </Router>

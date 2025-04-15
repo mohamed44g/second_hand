@@ -1,6 +1,4 @@
 "use client";
-
-import React from "react";
 import {
   Box,
   Container,
@@ -15,6 +13,8 @@ import {
   IconButton,
   Paper,
   Rating,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import {
@@ -29,8 +29,8 @@ import {
   Watch,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
-import img1 from "../assets/images/pic2.png";
-import img2 from "../assets/images/pic1.png";
+import { useQuery } from "@tanstack/react-query";
+import { fetchLatestProducts, fetchCategories } from "../api/productApi";
 
 // Styled components
 const HeroSection = styled(Box)(({ theme }) => ({
@@ -68,79 +68,57 @@ const ProductCard = styled(Card)(({ theme }) => ({
   },
 }));
 
-const ProductImageContainer = styled(Box)(() => ({
-  background: "linear-gradient(to right, #111, #333)",
-  width: "100%", // أو أي عرض مناسب
-  height: "auto", // أو ارتفاع مناسب، ممكن يعتمد على CardMedia اللي جواه
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-}));
-
-const ProductImage = styled(CardMedia)(() => ({
-  paddingTop: "100%", // للحفاظ على نسبة العرض إلى الارتفاع 1:1
-  backgroundSize: "contain", // لعرض الصورة بالكامل
-  backgroundPosition: "center",
-  backgroundRepeat: "no-repeat",
-  height: 300,
-  width: 300,
+const ProductImage = styled(CardMedia)(({ theme }) => ({
+  paddingTop: "100%",
+  backgroundColor: "#000",
 }));
 
 const HomePage = () => {
-  // Sample product data
-  const featuredProducts = [
-    {
-      id: 1,
-      name: "آيفون 13 برو ماكس",
-      image: img2,
-      price: 15000,
-      oldPrice: 18000,
-      rating: 4.5,
-      isAuction: false,
-      category: "هواتف",
-      condition: "ممتاز",
-    },
-    {
-      id: 2,
-      name: "سامسونج جالاكسي S21",
-      image: img1,
-      price: 10000,
-      oldPrice: 12000,
-      rating: 4.2,
-      isAuction: true,
-      auctionEndsIn: "2 ساعة",
-      category: "هواتف",
-      condition: "جيد جداً",
-    },
-    {
-      id: 3,
-      name: "ماك بوك برو 2021",
-      image: img2,
-      price: 25000,
-      oldPrice: 30000,
-      rating: 4.8,
-      isAuction: false,
-      category: "لابتوب",
-      condition: "ممتاز",
-    },
-    {
-      id: 4,
-      name: "سماعات آبل إيربودز برو",
-      image: img1,
-      price: 3500,
-      oldPrice: 4500,
-      rating: 4.6,
-      isAuction: false,
-      category: "سماعات",
-      condition: "جديد تقريباً",
-    },
-  ];
+  // استخدام React Query لجلب أحدث المنتجات
+  const {
+    data: latestProductsData,
+    isLoading: isLoadingProducts,
+    isError: isErrorProducts,
+    error: productsError,
+  } = useQuery({
+    queryKey: ["latestProducts"],
+    queryFn: fetchLatestProducts,
+  });
 
+  // استخدام React Query لجلب الفئات
+  const {
+    data: categoriesData,
+    isLoading: isLoadingCategories,
+    isError: isErrorCategories,
+    error: categoriesError,
+  } = useQuery({
+    queryKey: ["categories"],
+    queryFn: fetchCategories,
+  });
+
+  // استخراج البيانات من الاستجابات
+  const latestProducts = latestProductsData?.data || [];
+  const mainCategories = categoriesData?.data?.mainCategories || [];
+
+  // تعيين أيقونات للفئات
+  const getCategoryIcon = (categoryName) => {
+    const name = categoryName.toLowerCase();
+    if (name.includes("هواتف") || name.includes("موبايل"))
+      return <Smartphone fontSize="large" />;
+    if (name.includes("لابتوب")) return <Laptop fontSize="large" />;
+    if (name.includes("سماعات") || name.includes("اكسسوارات"))
+      return <Headphones fontSize="large" />;
+    if (name.includes("كاميرات")) return <Camera fontSize="large" />;
+    if (name.includes("ساعات")) return <Watch fontSize="large" />;
+    return <Smartphone fontSize="large" />; // أيقونة افتراضية
+  };
+
+  // Sample auction products data (يمكن استبدالها بطلب API حقيقي لاحقاً)
   const auctionProducts = [
     {
       id: 5,
       name: "آيباد برو 2022",
-      image: img1,
+      image: "/placeholder.svg?height=300&width=300",
       currentBid: 8000,
       nextMinBid: 8200,
       bids: 15,
@@ -151,7 +129,7 @@ const HomePage = () => {
     {
       id: 6,
       name: "سوني بلاي ستيشن 5",
-      image: img2,
+      image: "/placeholder.svg?height=300&width=300",
       currentBid: 12000,
       nextMinBid: 12200,
       bids: 23,
@@ -162,7 +140,7 @@ const HomePage = () => {
     {
       id: 7,
       name: "كاميرا كانون EOS R5",
-      image: img1,
+      image: "/placeholder.svg?height=300&width=300",
       currentBid: 20000,
       nextMinBid: 20500,
       bids: 8,
@@ -173,7 +151,7 @@ const HomePage = () => {
     {
       id: 8,
       name: "ساعة آبل الإصدار 7",
-      image: img2,
+      image: "/placeholder.svg?height=300&width=300",
       currentBid: 4500,
       nextMinBid: 4600,
       bids: 10,
@@ -181,14 +159,6 @@ const HomePage = () => {
       category: "ساعات ذكية",
       condition: "جيد جداً",
     },
-  ];
-
-  const categories = [
-    { name: "هواتف محمولة", icon: <Smartphone fontSize="large" /> },
-    { name: "لابتوب", icon: <Laptop fontSize="large" /> },
-    { name: "سماعات", icon: <Headphones fontSize="large" /> },
-    { name: "كاميرات", icon: <Camera fontSize="large" /> },
-    { name: "ساعات ذكية", icon: <Watch fontSize="large" /> },
   ];
 
   return (
@@ -224,18 +194,34 @@ const HomePage = () => {
             <Box sx={{ mt: 4 }}>
               <Button
                 variant="contained"
+                color="primary"
+                size="large"
+                sx={{ mx: 1, px: 4, py: 1.5 }}
+                component={Link}
+                to="/products"
+              >
+                تصفح المنتجات
+              </Button>
+              <Button
+                variant="outlined"
+                color="primary"
                 size="large"
                 sx={{
                   mx: 1,
                   px: 4,
                   py: 1.5,
-                  borderRadius: 3,
-                  backgroundColor: "#333",
+                  bgcolor: "rgba(255,255,255,0.1)",
+                  borderColor: "white",
+                  color: "white",
+                  "&:hover": {
+                    bgcolor: "rgba(255,255,255,0.2)",
+                    borderColor: "white",
+                  },
                 }}
                 component={Link}
-                to="/products"
+                to="/sell"
               >
-                تصفح المنتجات
+                بيع جهازك
               </Button>
             </Box>
           </Box>
@@ -263,26 +249,44 @@ const HomePage = () => {
           تصفح أحدث الأجهزة المستعملة حسب الفئة
         </Typography>
 
-        <Grid container spacing={3} justifyContent="center">
-          {categories.map((category, index) => (
-            <Grid item xs={6} sm={4} md={2.4} key={index}>
-              <CategoryCard elevation={2}>
-                <Box sx={{ color: "primary.main", mb: 1 }}>{category.icon}</Box>
-                <Typography
-                  variant="subtitle1"
-                  component="h3"
-                  fontWeight="medium"
+        {isLoadingCategories ? (
+          <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : isErrorCategories ? (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            حدث خطأ أثناء تحميل الفئات:{" "}
+            {categoriesError?.message || "خطأ غير معروف"}
+          </Alert>
+        ) : (
+          <Grid container spacing={3} justifyContent="center">
+            {mainCategories.map((category) => (
+              <Grid item xs={6} sm={4} md={2.4} key={category.main_category_id}>
+                <CategoryCard
+                  elevation={2}
+                  component={Link}
+                  to={`/category/${category.main_category_id}`}
+                  sx={{ textDecoration: "none" }}
                 >
-                  {category.name}
-                </Typography>
-              </CategoryCard>
-            </Grid>
-          ))}
-        </Grid>
+                  <Box sx={{ color: "primary.main", mb: 1 }}>
+                    {getCategoryIcon(category.main_category_name)}
+                  </Box>
+                  <Typography
+                    variant="subtitle1"
+                    component="h3"
+                    fontWeight="medium"
+                  >
+                    {category.main_category_name}
+                  </Typography>
+                </CategoryCard>
+              </Grid>
+            ))}
+          </Grid>
+        )}
       </Container>
 
       {/* Featured Products Section */}
-      <Box sx={{ bgcolor: "background.default", py: 6, mt: 15 }}>
+      <Box sx={{ bgcolor: "background.default", py: 6 }}>
         <Container>
           <Box
             sx={{
@@ -305,107 +309,133 @@ const HomePage = () => {
             </Button>
           </Box>
 
-          <Grid container spacing={3}>
-            {featuredProducts.map((product) => (
-              <Grid item xs={12} sm={6} md={3} key={product.id}>
-                <ProductCard>
-                  <ProductImageContainer>
-                    <ProductImage image={product.image} title={product.name} />
-                  </ProductImageContainer>
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        mb: 1,
-                      }}
-                    >
-                      <Chip
-                        label={product.category}
-                        size="small"
-                        sx={{ bgcolor: "rgba(0,0,0,0.05)" }}
-                      />
-                      <Chip
-                        label={product.condition}
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      />
-                    </Box>
-                    <Typography variant="h6" component="h3" gutterBottom>
-                      {product.name}
-                    </Typography>
-                    <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                      <Rating
-                        value={product.rating}
-                        precision={0.5}
-                        size="small"
-                        readOnly
-                      />
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ ml: 1 }}
+          {isLoadingProducts ? (
+            <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : isErrorProducts ? (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              حدث خطأ أثناء تحميل المنتجات:{" "}
+              {productsError?.message || "خطأ غير معروف"}
+            </Alert>
+          ) : latestProducts.length === 0 ? (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              لا توجد منتجات متاحة حالياً
+            </Alert>
+          ) : (
+            <Grid container spacing={3}>
+              {latestProducts.slice(0, 4).map((product) => (
+                <Grid item xs={12} sm={6} md={3} key={product.device_id}>
+                  <ProductCard>
+                    <ProductImage
+                      image={
+                        product.image_url ||
+                        "/placeholder.svg?height=300&width=300"
+                      }
+                      title={product.name}
+                    />
+                    <CardContent sx={{ flexGrow: 1 }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          mb: 1,
+                        }}
                       >
-                        ({product.rating})
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <Typography
-                        variant="h6"
-                        component="span"
-                        color="primary.main"
-                        fontWeight="bold"
-                      >
-                        {product.price} ج.م
-                      </Typography>
-                      {product.oldPrice && (
-                        <Typography
-                          variant="body2"
-                          component="span"
-                          color="text.secondary"
-                          sx={{ ml: 1, textDecoration: "line-through" }}
-                        >
-                          {product.oldPrice} ج.م
-                        </Typography>
-                      )}
-                    </Box>
-                    {product.isAuction && (
-                      <Box sx={{ mt: 1 }}>
                         <Chip
-                          icon={<Gavel fontSize="small" />}
-                          label={`ينتهي في ${product.auctionEndsIn}`}
+                          label={
+                            product.main_category_name ||
+                            product.main_category_id
+                          }
                           size="small"
-                          color="secondary"
+                          sx={{ bgcolor: "rgba(0,0,0,0.05)" }}
+                        />
+                        <Chip
+                          label={product.condition}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
                         />
                       </Box>
-                    )}
-                  </CardContent>
-                  <CardActions
-                    sx={{ justifyContent: "space-between", px: 2, pb: 2 }}
-                  >
-                    <Button
-                      variant="contained"
-                      size="small"
-                      startIcon={<ShoppingCart />}
-                      component={Link}
-                      to={`/product/${product.id}`}
+                      <Typography variant="h6" component="h3" gutterBottom>
+                        {product.name}
+                      </Typography>
+                      {product.rating && (
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", mb: 1 }}
+                        >
+                          <Rating
+                            value={product.rating}
+                            precision={0.5}
+                            size="small"
+                            readOnly
+                          />
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ ml: 1 }}
+                          >
+                            ({product.rating})
+                          </Typography>
+                        </Box>
+                      )}
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <Typography
+                          variant="h6"
+                          component="span"
+                          color="primary.main"
+                          fontWeight="bold"
+                        >
+                          {product.current_price} ج.م
+                        </Typography>
+                        {product.starting_price !== product.current_price && (
+                          <Typography
+                            variant="body2"
+                            component="span"
+                            color="text.secondary"
+                            sx={{ ml: 1, textDecoration: "line-through" }}
+                          >
+                            {product.starting_price} ج.م
+                          </Typography>
+                        )}
+                      </Box>
+                      {product.is_auction && (
+                        <Box sx={{ mt: 1 }}>
+                          <Chip
+                            icon={<Gavel fontSize="small" />}
+                            label="مزاد"
+                            size="small"
+                            color="secondary"
+                          />
+                        </Box>
+                      )}
+                    </CardContent>
+                    <CardActions
+                      sx={{ justifyContent: "space-between", px: 2, pb: 2 }}
                     >
-                      عرض المنتج
-                    </Button>
-                    <IconButton aria-label="add to favorites" size="small">
-                      <FavoriteBorder />
-                    </IconButton>
-                  </CardActions>
-                </ProductCard>
-              </Grid>
-            ))}
-          </Grid>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<ShoppingCart />}
+                        component={Link}
+                        to={`/product/${product.device_id}`}
+                      >
+                        عرض المنتج
+                      </Button>
+                      <IconButton aria-label="add to favorites" size="small">
+                        <FavoriteBorder />
+                      </IconButton>
+                    </CardActions>
+                  </ProductCard>
+                </Grid>
+              ))}
+            </Grid>
+          )}
         </Container>
       </Box>
 
       {/* Auctions Section */}
-      <Container sx={{ mt: 15, mb: 6 }}>
+      <Container sx={{ mt: 8, mb: 6 }}>
         <Box
           sx={{
             display: "flex",
@@ -432,9 +462,7 @@ const HomePage = () => {
             <Grid item xs={12} sm={6} md={3} key={product.id}>
               <ProductCard>
                 <Box sx={{ position: "relative" }}>
-                  <ProductImageContainer>
-                    <ProductImage image={product.image} title={product.name} />
-                  </ProductImageContainer>
+                  <ProductImage image={product.image} title={product.name} />
                   <Box
                     sx={{
                       position: "absolute",
@@ -550,7 +578,7 @@ const HomePage = () => {
       </Container>
 
       {/* How It Works Section */}
-      <Box sx={{ bgcolor: "background.default", py: 8, mt: 15 }}>
+      <Box sx={{ bgcolor: "background.default", py: 8 }}>
         <Container>
           <Typography
             variant="h4"
@@ -691,7 +719,7 @@ const HomePage = () => {
       </Box>
 
       {/* Testimonials Section */}
-      <Container sx={{ mt: 15 }}>
+      <Container sx={{ mt: 8, mb: 6 }}>
         <Typography
           variant="h4"
           component="h2"
@@ -833,7 +861,7 @@ const HomePage = () => {
       </Container>
 
       {/* CTA Section */}
-      <Box sx={{ bgcolor: "black", color: "white", py: 10, mt: 15, mb: 15 }}>
+      <Box sx={{ bgcolor: "black", color: "white", py: 8 }}>
         <Container>
           <Grid container spacing={4} alignItems="center">
             <Grid item xs={12} md={7}>
@@ -852,8 +880,9 @@ const HomePage = () => {
                 variant="contained"
                 color="primary"
                 size="large"
-                sx={{ px: 4, py: 1.5, backgroundColor: "#333" }}
+                sx={{ px: 4, py: 1.5 }}
                 component={Link}
+                to="/sell"
               >
                 بيع جهازك الآن
               </Button>
@@ -861,7 +890,7 @@ const HomePage = () => {
             <Grid item xs={12} md={5}>
               <Box
                 component="img"
-                src="src/assets/images/sellIcon.png"
+                src="/placeholder.svg?height=300&width=400"
                 alt="Sell your device"
                 sx={{
                   width: "100%",

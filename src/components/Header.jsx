@@ -19,6 +19,9 @@ import {
   ListItemText,
   ListItemIcon,
   Divider,
+  CircularProgress,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { styled, alpha } from "@mui/material/styles";
 import {
@@ -26,14 +29,13 @@ import {
   ShoppingCart as CartIcon,
   Person as PersonIcon,
   Menu as MenuIcon,
-  Favorite as FavoriteIcon,
-  Smartphone,
-  Laptop,
-  Headphones,
-  Camera,
-  Watch,
+  ShoppingBag,
+  Gavel,
+  Close as CloseIcon,
 } from "@mui/icons-material";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
+import { searchProducts } from "../api/productApi";
 
 const Search = styled("div")(({ theme }) => ({
   position: "relative",
@@ -82,6 +84,30 @@ const StyledLink = styled(Link)({
 const Header = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const navigate = useNavigate();
+
+  // استخدام React Query للبحث
+  const searchMutation = useMutation({
+    mutationFn: searchProducts,
+    onSuccess: (data) => {
+      if (data.status === "success") {
+        setSearchResults(data.data || []);
+        setShowSearchResults(true);
+      } else {
+        setSnackbarMessage("حدث خطأ أثناء البحث");
+        setSnackbarOpen(true);
+      }
+    },
+    onError: (error) => {
+      setSnackbarMessage(`حدث خطأ: ${error.message}`);
+      setSnackbarOpen(true);
+    },
+  });
 
   const handleProfileMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -90,9 +116,33 @@ const Header = () => {
   const handleMenuClose = () => {
     setAnchorEl(null);
   };
-
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  const handleSearchChange = (event) => {
+    setSearchQuery(event.target.value);
+  };
+
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    if (searchQuery.trim() === "") return;
+
+    // إرسال طلب البحث
+    searchMutation.mutate(searchQuery);
+  };
+
+  const handleSearchResultClick = (productId) => {
+    setShowSearchResults(false);
+    navigate(`/product/${productId}`);
+  };
+
+  const handleCloseSearchResults = () => {
+    setShowSearchResults(false);
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
   };
 
   return (
@@ -123,14 +173,13 @@ const Header = () => {
             sx={{
               mr: 2,
               display: "flex",
-              flexDirection: "row-reverse",
               fontWeight: 700,
               color: "primary.main",
               textDecoration: "none",
             }}
           >
-            <span style={{ color: "#ff8c00" }}>Second</span>
             <span style={{ color: "#000" }}>Hand</span>
+            <span style={{ color: "#ff8c00" }}>Second</span>
           </Typography>
 
           <Box sx={{ flexGrow: 1, display: { xs: "none", md: "flex" } }}>
@@ -151,24 +200,115 @@ const Header = () => {
             </Button>
           </Box>
 
-          <Search>
-            <SearchIconWrapper>
-              <SearchIcon />
-            </SearchIconWrapper>
-            <StyledInputBase
-              placeholder="ابحث عن منتجات..."
-              inputProps={{ "aria-label": "search" }}
-            />
-          </Search>
+          <Box sx={{ position: "relative" }}>
+            <form onSubmit={handleSearchSubmit}>
+              <Search>
+                <SearchIconWrapper>
+                  <SearchIcon />
+                </SearchIconWrapper>
+                <StyledInputBase
+                  placeholder="ابحث عن منتجات..."
+                  inputProps={{ "aria-label": "search" }}
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                />
+              </Search>
+            </form>
+
+            {/* نتائج البحث */}
+            {showSearchResults && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: "100%",
+                  right: 0,
+                  width: 300,
+                  maxHeight: 400,
+                  overflowY: "auto",
+                  bgcolor: "background.paper",
+                  boxShadow: 3,
+                  borderRadius: 1,
+                  zIndex: 1000,
+                  mt: 1,
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    p: 1,
+                  }}
+                >
+                  <Typography variant="subtitle2" fontWeight="bold">
+                    نتائج البحث
+                  </Typography>
+                  <IconButton size="small" onClick={handleCloseSearchResults}>
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+                <Divider />
+                {searchMutation.isPending ? (
+                  <Box sx={{ display: "flex", justifyContent: "center", p: 2 }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : searchResults.length === 0 ? (
+                  <Box sx={{ p: 2, textAlign: "center" }}>
+                    <Typography variant="body2" color="text.secondary">
+                      لا توجد نتائج مطابقة
+                    </Typography>
+                  </Box>
+                ) : (
+                  <List sx={{ p: 0 }}>
+                    {searchResults.map((product) => (
+                      <ListItem
+                        key={product.device_id}
+                        button
+                        onClick={() =>
+                          handleSearchResultClick(product.device_id)
+                        }
+                        sx={{
+                          borderBottom: "1px solid",
+                          borderColor: "divider",
+                        }}
+                      >
+                        <Box
+                          component="img"
+                          src={
+                            product.image_url ||
+                            "/placeholder.svg?height=50&width=50"
+                          }
+                          alt={product.name}
+                          sx={{ width: 40, height: 40, mr: 1, borderRadius: 1 }}
+                        />
+                        <ListItemText
+                          primary={product.name}
+                          secondary={
+                            <Typography
+                              variant="body2"
+                              color="primary.main"
+                              fontWeight="bold"
+                            >
+                              {product.current_price} ج.م
+                            </Typography>
+                          }
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                )}
+              </Box>
+            )}
+          </Box>
 
           <Box sx={{ display: "flex" }}>
-            <IconButton color="inherit" component={Link} to="/favorites">
-              <Badge badgeContent={3} color="primary">
-                <FavoriteIcon />
+            <IconButton color="inherit" component={Link} to="/orders">
+              <Badge badgeContent={0} color="primary">
+                <ShoppingBag />
               </Badge>
             </IconButton>
             <IconButton color="inherit" component={Link} to="/cart">
-              <Badge badgeContent={2} color="primary">
+              <Badge badgeContent={0} color="primary">
                 <CartIcon />
               </Badge>
             </IconButton>
@@ -185,7 +325,6 @@ const Header = () => {
         </Toolbar>
       </Container>
 
-
       {/* Profile Menu */}
       <Menu
         anchorEl={anchorEl}
@@ -198,16 +337,12 @@ const Header = () => {
         <MenuItem onClick={handleMenuClose} component={Link} to="/wallet">
           المحفظة
         </MenuItem>
-        <MenuItem onClick={handleMenuClose} component={Link} to="/my-listings">
+        <MenuItem onClick={handleMenuClose} component={Link} to="/my-products">
           منتجاتي
-        </MenuItem>
-        <MenuItem onClick={handleMenuClose} component={Link} to="/my-auctions">
-          مزاداتي
         </MenuItem>
         <MenuItem onClick={handleMenuClose} component={Link} to="/messages">
           الرسائل
         </MenuItem>
-        <Divider />
         <MenuItem onClick={handleMenuClose} component={Link} to="/login">
           تسجيل الدخول
         </MenuItem>
@@ -222,33 +357,44 @@ const Header = () => {
           onKeyDown={toggleMobileMenu}
         >
           <List>
-            <ListItem  component={Link} to="/">
+            <ListItem button component={Link} to="/">
               <ListItemText primary="الرئيسية" />
             </ListItem>
-            <ListItem  component={Link} to="/categories">
-              <ListItemText primary="الفئات" />
+            <ListItem button component={Link} to="/products">
+              <ListItemText primary="المنتجات" />
             </ListItem>
-            <ListItem  component={Link} to="/auctions">
+            <ListItem button component={Link} to="/auctions">
               <ListItemText primary="المزادات" />
             </ListItem>
-            <ListItem  component={Link} to="/about">
+            <ListItem button component={Link} to="/about">
               <ListItemText primary="من نحن" />
             </ListItem>
-            <ListItem  component={Link} to="/contact">
+            <ListItem button component={Link} to="/contact">
               <ListItemText primary="اتصل بنا" />
             </ListItem>
           </List>
           <Divider />
           <List>
-            <ListItem  component={Link} to="/login">
+            <ListItem button component={Link} to="/login">
               <ListItemText primary="تسجيل الدخول" />
             </ListItem>
-            <ListItem  component={Link} to="/register">
+            <ListItem button component={Link} to="/register">
               <ListItemText primary="إنشاء حساب" />
             </ListItem>
           </List>
         </Box>
       </Drawer>
+
+      {/* Snackbar للإشعارات */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert onClose={handleCloseSnackbar} severity="error">
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </AppBar>
   );
 };

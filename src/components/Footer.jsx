@@ -1,5 +1,22 @@
-import { Box, Container, Grid, Typography, Link, TextField, Button, Divider } from "@mui/material"
-import { Facebook, Twitter, Instagram, LinkedIn, Email, Phone, LocationOn } from "@mui/icons-material"
+import {
+  Box,
+  Container,
+  Grid,
+  Typography,
+  Link,
+  TextField,
+  Button,
+  Divider,
+} from "@mui/material";
+import {
+  Facebook,
+  Twitter,
+  Instagram,
+  LinkedIn,
+  Email,
+  Phone,
+  LocationOn,
+} from "@mui/icons-material";
 
 const Footer = () => {
   return (
@@ -10,10 +27,10 @@ const Footer = () => {
             <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
               <span style={{ color: "#ff8c00" }}>Second</span>
               <span style={{ color: "#fff" }}>Hand</span>
-              <span style={{ color: "#ff8c00" }}>.</span>
             </Typography>
             <Typography variant="body2" paragraph>
-              منصة لبيع وشراء الأجهزة الإلكترونية المستعملة بأفضل الأسعار وبضمان الجودة.
+              منصة لبيع وشراء الأجهزة الإلكترونية المستعملة بأفضل الأسعار وبضمان
+              الجودة.
             </Typography>
             <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
               <Link href="#" color="inherit">
@@ -62,7 +79,7 @@ const Footer = () => {
             </Box>
             <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
               <Phone sx={{ mr: 1 }} fontSize="small" />
-              <Typography variant="body2">+20 123 456 7890</Typography>
+              <Typography variant="body2">20 123 456 7890</Typography>
             </Box>
             <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
               <Email sx={{ mr: 1 }} fontSize="small" />
@@ -101,7 +118,12 @@ const Footer = () => {
                   input: { color: "white" },
                 }}
               />
-              <Button fullWidth variant="contained" color="primary" sx={{ borderRadius: 1 }}>
+              <Button
+                fullWidth
+                variant="contained"
+                color="primary"
+                sx={{ borderRadius: 1, backgroundColor: "#333", mt: 2 }}
+              >
                 اشترك الآن
               </Button>
             </Box>
@@ -115,8 +137,7 @@ const Footer = () => {
         </Typography>
       </Container>
     </Box>
-  )
-}
+  );
+};
 
-export default Footer
-
+export default Footer;

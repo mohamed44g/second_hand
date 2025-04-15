@@ -44,7 +44,6 @@ const ProductImage = styled(CardMedia)(() => ({
 }));
 
 const ProductCardComponent = ({ device }) => {
-  console.log(device);
   return (
     <ProductCard>
       <ProductImageContainer>
@@ -75,7 +74,7 @@ const ProductCardComponent = ({ device }) => {
             color="primary.main"
             fontWeight="bold"
           >
-            {Math.round(device.current_price)} ج.م
+            {Math.round(device.starting_price)} ج.م
           </Typography>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>

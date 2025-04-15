@@ -16,12 +16,13 @@ import {
 } from "@mui/material";
 import ProductCard from "../components/ProductCard"; // استيراد الكارت الجديد
 import toast from "react-hot-toast";
+import { devices } from "../data/fakedata";
 
 // قوائم المحافظات والأنواع (مثال)
 const governorates = [
   "القاهرة",
   "الجيزة",
-  "الإسكندرية",
+  "الأسكندرية",
   "الدقهلية",
   "الشرقية",
   "المنوفية",
@@ -36,11 +37,12 @@ const ProductsPage = () => {
   });
 
   // جلب المنتجات باستخدام React Query
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["devices", filters],
     queryFn: async () => {
       const params = {};
-      if (filters.category) params.category = filters.category;
+      //اضافة الفلاتر الى params عشان نستخدمها في جلب البيانات
+      if (filters.category) params.mainCategory = filters.category;
       if (filters.location) params.location = filters.location;
       if (filters.priceRange[0] > 0) params.minPrice = filters.priceRange[0];
       if (filters.priceRange[1] < 10000)
@@ -49,6 +51,7 @@ const ProductsPage = () => {
       const response = await axiosInstance.get("/products", { params });
       return response.data.data.devices;
     },
+    enabled: false, // لا يتم تفعيل الاستعلام تلقائيًا
   });
 
   // التعامل مع تغيير الفلاتر
@@ -58,10 +61,6 @@ const ProductsPage = () => {
 
   const handlePriceChange = (event, newValue) => {
     setFilters((prev) => ({ ...prev, priceRange: newValue }));
-  };
-
-  const applyFilters = () => {
-    refetch(); // إعادة جلب البيانات بناءً على الفلاتر
   };
 
   if (error) {
@@ -75,10 +74,10 @@ const ProductsPage = () => {
       </Typography>
 
       {/* الفلاتر */}
-      <Box sx={{ mb: 4 }}>
-        <Grid container spacing={2}>
+      <Box sx={{ mb: 5 }}>
+        <Grid container spacing={5}>
           <Grid item xs={12} sm={4}>
-            <FormControl fullWidth>
+            <FormControl fullWidth sx={{ mt: 1.5 }}>
               <InputLabel>المحافظة</InputLabel>
               <Select
                 value={filters.location}
@@ -94,7 +93,7 @@ const ProductsPage = () => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={4}>
+          <Grid item xs={12} sm={4} sx={{ mt: 1.5 }}>
             <FormControl fullWidth>
               <InputLabel>النوع</InputLabel>
               <Select
@@ -125,20 +124,15 @@ const ProductsPage = () => {
               من {filters.priceRange[0]} إلى {filters.priceRange[1]} جنيه
             </Typography>
           </Grid>
-          <Grid item xs={12} sx={{ textAlign: "center" }}>
-            <Button variant="contained" onClick={applyFilters}>
-              تطبيق الفلاتر
-            </Button>
-          </Grid>
         </Grid>
       </Box>
 
       {/* عرض المنتجات */}
       {isLoading ? (
         <Typography align="center">جاري التحميل...</Typography>
-      ) : data?.length > 0 ? (
+      ) : devices?.length > 0 ? (
         <Grid container spacing={3}>
-          {data.map((device) => (
+          {devices[0].map((device) => (
             <Grid item xs={12} sm={6} md={3} key={device.device_id}>
               <ProductCard device={device} />
             </Grid>
