@@ -1,96 +1,70 @@
-"use client"
+"use client";
 
-import React from "react"
+import { useState } from "react";
+import { Box, Typography, Rating, Divider, Alert } from "@mui/material";
+import { useQuery } from "@tanstack/react-query";
+import axiosInstance from "../../api/axiosInstance";
+import ReviewsList from "../Reviews/ReviewsList.jsx";
+import ReviewForm from "../Reviews/ReviewForm.jsx";
 
-import { useState } from "react"
-import {
-  Box,
-  Typography,
-  Rating,
-  List,
-  ListItem,
-  ListItemAvatar,
-  Avatar,
-  ListItemText,
-  Divider,
-  Button,
-  TextField,
-  Paper,
-  Alert,
-  CircularProgress,
-  Collapse,
-  Grid,
-  Chip,
-} from "@mui/material"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { addSellerReview } from "../../api/sellerApi"
+const ReviewsSection = ({ sellerId }) => {
+  const [reviewAdded, setReviewAdded] = useState(false);
 
-const SellerReviews = ({ reviews = [], sellerId, rating = 0, reviewsCount = 0 }) => {
-  const [showForm, setShowForm] = useState(false)
-  const [reviewRating, setReviewRating] = useState(0)
-  const [comment, setComment] = useState("")
-  const [ratingError, setRatingError] = useState(false)
-  const [reviewAdded, setReviewAdded] = useState(false)
-  const queryClient = useQueryClient()
+  // استخدام React Query لجلب التقييمات
 
-  // حساب توزيع التقييمات
-  const calculateRatingDistribution = () => {
-    if (!reviews || reviews.length === 0) {
-      return [0, 0, 0, 0, 0]
+  const {
+    data: SellerReviewsData,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["sellerReviews", sellerId],
+    queryFn: async () => {
+      const response = await axiosInstance.get(`/reviews/seller/${sellerId}`);
+      return response.data?.data;
+    },
+    enabled: !!sellerId,
+  });
+
+  const handleReviewSuccess = () => {
+    setReviewAdded(true);
+    // إعادة تحميل التقييمات
+    refetch();
+
+    // إخفاء رسالة النجاح بعد 5 ثواني
+    setTimeout(() => {
+      setReviewAdded(false);
+    }, 5000);
+  };
+
+  // حساب متوسط التقييمات وعددها
+  const calculateRatingStats = () => {
+    if (!SellerReviewsData || !SellerReviewsData.length) {
+      return { average: 0, count: 0, distribution: [0, 0, 0, 0, 0] };
     }
 
-    const distribution = [0, 0, 0, 0, 0] // [1 star, 2 stars, 3 stars, 4 stars, 5 stars]
-    reviews.forEach((review) => {
-      if (review.rating >= 1 && review.rating <= 5) {
-        distribution[review.rating - 1]++
-      }
-    })
+    const count = SellerReviewsData.length;
+    const sum = SellerReviewsData.reduce(
+      (acc, review) => acc + review.rating,
+      0
+    );
+    const average = sum / count;
+
+    // حساب توزيع التقييمات (5 نجوم، 4 نجوم، إلخ)
+    const distribution = [0, 0, 0, 0, 0]; // [1 star, 2 stars, 3 stars, 4 stars, 5 stars]
+    SellerReviewsData.forEach((review) => {
+      distribution[review.rating - 1]++;
+    });
 
     // تحويل الأعداد إلى نسب مئوية
-    return distribution.map((count) => (reviews.length > 0 ? (count / reviews.length) * 100 : 0))
-  }
+    const percentages = distribution.map(
+      (count) => (count / SellerReviewsData.length) * 100
+    );
 
-  const ratingDistribution = calculateRatingDistribution()
+    return { average, count, distribution: percentages };
+  };
 
-  // إضافة تقييم جديد
-  const addReviewMutation = useMutation({
-    mutationFn: (reviewData) => {
-      return addSellerReview(reviewData)
-    },
-    onSuccess: () => {
-      // إعادة تحميل التقييمات بعد إضافة تقييم جديد
-      queryClient.invalidateQueries({ queryKey: ["sellerReviews", sellerId] })
-      setReviewRating(0)
-      setComment("")
-      setShowForm(false)
-      setReviewAdded(true)
-
-      // إخفاء رسالة النجاح بعد 5 ثواني
-      setTimeout(() => {
-        setReviewAdded(false)
-      }, 5000)
-    },
-  })
-
-  const handleSubmit = (e) => {
-    e.preventDefault()
-
-    // التحقق من إدخال تقييم
-    if (reviewRating === 0) {
-      setRatingError(true)
-      return
-    }
-
-    setRatingError(false)
-
-    const reviewData = {
-      seller_id: sellerId,
-      rating: reviewRating,
-      comment,
-    }
-
-    addReviewMutation.mutate(reviewData)
-  }
+  const { average, count, distribution } = calculateRatingStats();
 
   return (
     <Box>
@@ -100,86 +74,38 @@ const SellerReviews = ({ reviews = [], sellerId, rating = 0, reviewsCount = 0 })
         </Alert>
       )}
 
+      <ReviewForm sellerId={sellerId} onSuccess={handleReviewSuccess} />
+
       <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-          <Typography variant="h6" fontWeight="bold">
-            إضافة تقييم
-          </Typography>
-          <Button variant={showForm ? "outlined" : "contained"} size="small" onClick={() => setShowForm(!showForm)}>
-            {showForm ? "إلغاء" : "إضافة تقييم"}
-          </Button>
-        </Box>
+        <Typography variant="h6" fontWeight="bold" gutterBottom>
+          تقييمات المنتج ({count})
+        </Typography>
 
-        <Collapse in={showForm}>
-          <Paper sx={{ p: 3 }}>
-            {addReviewMutation.isError && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                حدث خطأ أثناء إضافة التقييم. يرجى المحاولة مرة أخرى.
-              </Alert>
-            )}
-
-            <form onSubmit={handleSubmit}>
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  تقييمك للبائع*
-                </Typography>
-                <Rating
-                  name="rating"
-                  value={reviewRating}
-                  onChange={(event, newValue) => {
-                    setReviewRating(newValue)
-                    setRatingError(false)
-                  }}
-                  size="large"
-                />
-                {ratingError && (
-                  <Typography variant="caption" color="error">
-                    يرجى إضافة تقييم
-                  </Typography>
-                )}
-              </Box>
-
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  تعليقك
-                </Typography>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={4}
-                  placeholder="اكتب تعليقك هنا..."
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                />
-              </Box>
-
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={addReviewMutation.isPending}
-                startIcon={addReviewMutation.isPending ? <CircularProgress size={20} color="inherit" /> : null}
+        {count > 0 && (
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+              <Typography
+                variant="h3"
+                color="primary.main"
+                fontWeight="bold"
+                sx={{ mr: 2 }}
               >
-                {addReviewMutation.isPending ? "جاري الإرسال..." : "إرسال التقييم"}
-              </Button>
-            </form>
-          </Paper>
-        </Collapse>
-      </Box>
-
-      <Box sx={{ mb: 4 }}>
-        <Grid container spacing={3} alignItems="center">
-          <Grid item xs={12} md={4}>
-            <Box sx={{ textAlign: "center" }}>
-              <Typography variant="h2" color="primary.main" fontWeight="bold">
-                {rating.toFixed(1)}
+                {average.toFixed(1)}
               </Typography>
-              <Rating value={rating} precision={0.1} readOnly size="large" sx={{ mb: 1 }} />
-              <Typography variant="body2" color="text.secondary">
-                بناءً على {reviewsCount} تقييم
-              </Typography>
+              <Box>
+                <Rating
+                  value={average}
+                  precision={0.1}
+                  readOnly
+                  size="large"
+                  sx={{ mb: 0.5 }}
+                />
+                <Typography variant="body2" color="text.secondary">
+                  بناءً على {count} تقييم
+                </Typography>
+              </Box>
             </Box>
-          </Grid>
-          <Grid item xs={12} md={8}>
+
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
               {[5, 4, 3, 2, 1].map((star) => (
                 <Box key={star} sx={{ display: "flex", alignItems: "center" }}>
@@ -198,69 +124,36 @@ const SellerReviews = ({ reviews = [], sellerId, rating = 0, reviewsCount = 0 })
                   >
                     <Box
                       sx={{
-                        width: `${ratingDistribution[star - 1]}%`,
+                        width: `${distribution[star - 1]}%`,
                         height: "100%",
-                        bgcolor: star >= 4 ? "success.main" : star === 3 ? "warning.main" : "error.main",
+                        bgcolor:
+                          star >= 4
+                            ? "success.main"
+                            : star === 3
+                            ? "warning.main"
+                            : "error.main",
                       }}
                     />
                   </Box>
                   <Typography variant="body2" sx={{ minWidth: 40 }}>
-                    {ratingDistribution[star - 1].toFixed(0)}%
+                    {distribution[star - 1].toFixed(0)}%
                   </Typography>
                 </Box>
               ))}
             </Box>
-          </Grid>
-        </Grid>
+          </Box>
+        )}
+
+        <Divider sx={{ my: 3 }} />
+
+        <ReviewsList
+          reviews={SellerReviewsData}
+          isLoading={isLoading}
+          error={error}
+        />
       </Box>
-
-      <Divider sx={{ my: 3 }} />
-
-      {reviews.length === 0 ? (
-        <Box sx={{ textAlign: "center", py: 4 }}>
-          <Typography variant="body1" color="text.secondary">
-            لا توجد تقييمات لهذا البائع حتى الآن.
-          </Typography>
-        </Box>
-      ) : (
-        <List>
-          {reviews.map((review, index) => (
-            <React.Fragment key={review.id || index}>
-              <ListItem alignItems="flex-start" sx={{ py: 2 }}>
-                <ListItemAvatar>
-                  <Avatar src={review.user?.avatar} alt={review.user?.name} />
-                </ListItemAvatar>
-                <ListItemText
-                  primary={
-                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                      <Typography variant="subtitle1" fontWeight="bold">
-                        {review.user?.name || "مستخدم"}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {new Date(review.date || review.created_at).toLocaleDateString("ar-EG")}
-                      </Typography>
-                    </Box>
-                  }
-                  secondary={
-                    <Box sx={{ mt: 1 }}>
-                      <Rating value={review.rating} size="small" readOnly sx={{ mb: 1 }} />
-                      <Typography variant="body2" color="text.primary" paragraph>
-                        {review.comment}
-                      </Typography>
-                      {review.product_name && (
-                        <Chip label={`المنتج: ${review.product_name}`} size="small" variant="outlined" sx={{ mt: 1 }} />
-                      )}
-                    </Box>
-                  }
-                />
-              </ListItem>
-              {index < reviews.length - 1 && <Divider variant="inset" component="li" />}
-            </React.Fragment>
-          ))}
-        </List>
-      )}
     </Box>
-  )
-}
+  );
+};
 
-export default SellerReviews
+export default ReviewsSection;

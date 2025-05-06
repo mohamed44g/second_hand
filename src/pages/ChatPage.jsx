@@ -18,6 +18,8 @@ import {
   Toolbar,
   CircularProgress,
   Alert,
+  Tooltip,
+  Snackbar,
 } from "@mui/material";
 import {
   Send as SendIcon,
@@ -27,6 +29,7 @@ import {
   MoreVert as MoreVertIcon,
   Phone as PhoneIcon,
   Info as InfoIcon,
+  Flag as FlagIcon,
 } from "@mui/icons-material";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -34,6 +37,7 @@ import { arEG } from "date-fns/locale";
 import { fetchChatMessages } from "../api/chatApi";
 import io from "socket.io-client";
 import { getUserID } from "../utils/checkUser.js";
+import ReportDialog from "../components/ReportDialog";
 import { masseges } from "../data/fakedata.js";
 
 const ChatPage = () => {
@@ -43,35 +47,41 @@ const ChatPage = () => {
   const navigate = useNavigate();
   const [message, setMessage] = useState("");
   const [chatData, setChatData] = useState(null);
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(masseges);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
-  const socketRef = useRef(null); // افتراضي للاختبار، يجب استبداله بمعرف المستخدم الحقيقي
+  const socketRef = useRef(null);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [reportEntityId, setReportEntityId] = useState(null);
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
 
-  const currentUserId = getUserID() || 3; // استبدل هذا بمعرف المستخدم الحقيقي
+  // const currentUserId = getUserID();
+  const currentUserId = 7;
+
   // إعداد اتصال Socket.io
-  useEffect(() => {
-    // إنشاء اتصال Socket.io
-    socketRef.current = io("http://localhost:5000"); // استبدل بعنوان الخادم الخاص بك
+  // useEffect(() => {
+  //   // إنشاء اتصال Socket.io
+  //   socketRef.current = io("http://localhost:5000"); // استبدل بعنوان الخادم الخاص بك
 
-    // الانضمام إلى غرفة الدردشة
-    if (chatId) {
-      socketRef.current.emit("join_chat", chatId);
-    }
+  //   // الانضمام إلى غرفة الدردشة
+  //   if (chatId) {
+  //     socketRef.current.emit("join_chat", chatId);
+  //   }
 
-    // استقبال الرسائل الجديدة
-    socketRef.current.on("receive_message", (newMessage) => {
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
-    });
+  //   // استقبال الرسائل الجديدة
+  //   socketRef.current.on("receive_message", (newMessage) => {
+  //     setMessages((prevMessages) => [...prevMessages, newMessage]);
+  //   });
 
-    // تنظيف عند إزالة المكون
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
-    };
-  }, [chatId]);
+  //   // تنظيف عند إزالة المكون
+  //   return () => {
+  //     if (socketRef.current) {
+  //       socketRef.current.disconnect();
+  //     }
+  //   };
+  // }, [chatId]);
 
   // جلب بيانات المحادثة والرسائل
   // useEffect(() => {
@@ -139,6 +149,7 @@ const ChatPage = () => {
         sender_id: currentUserId,
         message_text: message,
         timestamp: new Date().toISOString(),
+        sender_name: "أنت", // يمكن استبداله باسم المستخدم الحقيقي
       };
 
       setMessages((prevMessages) => [...prevMessages, localMessage]);
@@ -157,39 +168,52 @@ const ChatPage = () => {
     return format(new Date(date), "h:mm a", { locale: arEG });
   };
 
-  // تنسيق تاريخ الرسالة
-  // // const formatMessageDate = (date) => {
-  // //   const now = new Date();
-  // //   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  // //   const yesterday = new Date(today);
-  // //   yesterday.setDate(yesterday.getDate() - 1);
-  // //   const messageDate = new Date(date);
+  const formatMessageDate = (date) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const messageDate = new Date(date);
 
-  // //   if (messageDate >= today) {
-  // //     return "اليوم";
-  // //   } else if (messageDate >= yesterday) {
-  // //     return "الأمس";
-  // //   } else {
-  // //     return format(messageDate, "EEEE d MMMM", { locale: arEG });
-  // //   }
-  // // };
+    if (messageDate >= today) {
+      return "اليوم";
+    } else if (messageDate >= yesterday) {
+      return "الأمس";
+    } else {
+      return format(messageDate, "EEEE d MMMM", { locale: arEG });
+    }
+  };
 
-  // // تجميع الرسائل حسب التاريخ
-  // const groupMessagesByDate = () => {
-  //   const groups = {};
-  //   messages.forEach((message) => {
-  //     const date = new Date(message.timestamp);
-  //     const dateString = format(date, "yyyy-MM-dd");
-  //     if (!groups[dateString]) {
-  //       groups[dateString] = [];
-  //     }
-  //     groups[dateString].push(message);
-  //   });
-  //   return groups;
-  // };
+  // تجميع الرسائل حسب التاريخ
+  const groupMessagesByDate = () => {
+    const groups = {};
+    messages.forEach((message) => {
+      const date = new Date(message.timestamp);
+      const dateString = format(date, "yyyy-MM-dd");
+      if (!groups[dateString]) {
+        groups[dateString] = [];
+      }
+      groups[dateString].push(message);
+    });
+    return groups;
+  };
 
-  // تنسيق الرسائل لتكون جاهزة للعرض
-  // const messageGroups = groupMessagesByDate();
+  // فتح نافذة الإبلاغ
+  const handleOpenReportDialog = (messageId) => {
+    setReportEntityId(messageId);
+    setReportDialogOpen(true);
+  };
+
+  // إغلاق نافذة الإبلاغ
+  const handleCloseReportDialog = (success) => {
+    setReportDialogOpen(false);
+    if (success) {
+      setSnackbarMessage("تم تقديم البلاغ بنجاح");
+      setOpenSnackbar(true);
+    }
+  };
+
+  const messageGroups = groupMessagesByDate();
 
   if (loading) {
     return (
@@ -236,6 +260,9 @@ const ChatPage = () => {
                 <Typography variant="subtitle1" fontWeight="medium">
                   {chatData?.user_1_name || "المستخدم"}
                 </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  متصل الآن
+                </Typography>
               </Box>
               <IconButton>
                 <PhoneIcon />
@@ -275,6 +302,9 @@ const ChatPage = () => {
               <Typography variant="subtitle1" fontWeight="medium">
                 {chatData?.user_1_name || "المستخدم"}
               </Typography>
+              <Typography variant="caption" color="text.secondary">
+                متصل الآن
+              </Typography>
             </Box>
             <Box sx={{ flexGrow: 1 }} />
             <IconButton>
@@ -294,99 +324,113 @@ const ChatPage = () => {
             bgcolor: "background.default",
           }}
         >
-          <Box>
-            {/* تاريخ الرسايل
-            <Box sx={{ display: "flex", justifyContent: "center", my: 2 }}>
-                <Chip
-                  label={formatMessageDate(new Date(msg.timestamp))}
-                  size="small"
-                />
-              </Box> */}
-            {masseges[0].map((msg) => (
-              <Box
-                key={msg.message_id}
-                sx={{
-                  display: "flex",
-                  justifyContent:
-                    msg.sender_id === currentUserId ? "flex-end" : "flex-start",
-                  mb: 2,
-                }}
-              >
-                {msg.sender_id !== currentUserId && (
-                  <Avatar
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      mr: 1,
-                      mt: 0.5,
-                      display: { xs: "none", sm: "block" },
-                    }}
-                  />
-                )}
+          {Object.keys(messageGroups).map((date) => (
+            <Box key={date}>
+              <Box sx={{ display: "flex", justifyContent: "center", my: 2 }}>
+                <Chip label={formatMessageDate(new Date(date))} size="small" />
+              </Box>
+              {messageGroups[date].map((msg) => (
                 <Box
+                  key={msg.message_id}
                   sx={{
-                    maxWidth: "70%",
-                    bgcolor:
+                    display: "flex",
+                    justifyContent:
                       msg.sender_id === currentUserId
-                        ? "primary.main"
-                        : "background.paper",
-                    color:
-                      msg.sender_id === currentUserId
-                        ? "white"
-                        : "text.primary",
-                    borderRadius: 2,
-                    p: 2,
-                    boxShadow: 1,
-                    position: "relative",
+                        ? "flex-end"
+                        : "flex-start",
+                    mb: 2,
                   }}
                 >
-                  <Typography variant="body1">{msg.message_text}</Typography>
+                  {msg.sender_id !== currentUserId && (
+                    <Avatar
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        mr: 1,
+                        mt: 0.5,
+                        display: { xs: "none", sm: "block" },
+                      }}
+                    />
+                  )}
                   <Box
                     sx={{
-                      display: "flex",
-                      justifyContent: "flex-end",
-                      alignItems: "center",
-                      mt: 1,
+                      maxWidth: "70%",
+                      bgcolor:
+                        msg.sender_id === currentUserId
+                          ? "primary.main"
+                          : "background.paper",
+                      color:
+                        msg.sender_id === currentUserId
+                          ? "white"
+                          : "text.primary",
+                      borderRadius: 2,
+                      p: 2,
+                      boxShadow: 1,
+                      position: "relative",
                     }}
                   >
-                    <Typography
-                      variant="caption"
-                      color={
-                        msg.sender_id === currentUserId
-                          ? "rgba(255,255,255,0.7)"
-                          : "text.secondary"
-                      }
+                    <Typography variant="body1">{msg.message_text}</Typography>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        alignItems: "center",
+                        mt: 1,
+                      }}
                     >
-                      {formatMessageTime(msg.timestamp)}
-                    </Typography>
-                    {msg.sender_id === currentUserId && (
-                      <Box
-                        component="span"
-                        sx={{
-                          ml: 0.5,
-                          display: "flex",
-                          alignItems: "center",
-                        }}
+                      <Typography
+                        variant="caption"
+                        color={
+                          msg.sender_id === currentUserId
+                            ? "rgba(255,255,255,0.7)"
+                            : "text.secondary"
+                        }
                       >
+                        {formatMessageTime(msg.timestamp)}
+                      </Typography>
+                      {msg.sender_id === currentUserId && (
                         <Box
                           component="span"
                           sx={{
-                            width: 6,
-                            height: 6,
-                            borderRadius: "50%",
-                            bgcolor: "success.main",
-                            display: "inline-block",
                             ml: 0.5,
+                            display: "flex",
+                            alignItems: "center",
                           }}
-                        />
-                      </Box>
-                    )}
+                        >
+                          <Box
+                            component="span"
+                            sx={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              bgcolor: "success.main",
+                              display: "inline-block",
+                              ml: 0.5,
+                            }}
+                          />
+                        </Box>
+                      )}
+                    </Box>
+                    <div ref={messagesEndRef} />
                   </Box>
+
+                  {/* أيقونة الإبلاغ - تظهر فقط للرسائل التي لم يرسلها المستخدم الحالي */}
+                  {msg.sender_id !== currentUserId && (
+                    <Tooltip title="الإبلاغ عن هذه الرسالة" arrow>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        sx={{ ml: 1, alignSelf: "center" }}
+                        onClick={() => handleOpenReportDialog(msg.message_id)}
+                      >
+                        <FlagIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                 </Box>
-              </Box>
-            ))}
-          </Box>
-          <div ref={messagesEndRef} />
+              ))}
+            </Box>
+          ))}
         </Box>
 
         {/* Message Input */}
@@ -399,6 +443,12 @@ const ChatPage = () => {
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center" }}>
+            <IconButton size="small" sx={{ mr: 1 }}>
+              <AttachFileIcon />
+            </IconButton>
+            <IconButton size="small" sx={{ mr: 1 }}>
+              <ImageIcon />
+            </IconButton>
             <TextField
               fullWidth
               placeholder="اكتب رسالتك هنا..."
@@ -421,6 +471,23 @@ const ChatPage = () => {
           </Box>
         </Box>
       </Paper>
+
+      {/* نافذة الإبلاغ */}
+      <ReportDialog
+        open={reportDialogOpen}
+        onClose={handleCloseReportDialog}
+        entityType="message"
+        entityId={reportEntityId}
+      />
+
+      {/* Snackbar للإشعارات */}
+      <Snackbar
+        open={openSnackbar}
+        autoHideDuration={6000}
+        onClose={() => setOpenSnackbar(false)}
+        message={snackbarMessage}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+      />
     </Container>
   );
 };

@@ -57,6 +57,8 @@ const ReviewsList = ({ reviews, isLoading, error }) => {
     );
   }
 
+  console.log("reviews", reviews);
+
   if (!reviews || reviews.length === 0) {
     return (
       <Box sx={{ textAlign: "center", py: 3 }}>
@@ -69,46 +71,49 @@ const ReviewsList = ({ reviews, isLoading, error }) => {
 
   return (
     <List sx={{ width: "100%", bgcolor: "background.paper" }}>
-      {reviews?.map((review, index) => (
-        <React.Fragment key={review.review_id}>
-          <ListItem alignItems="flex-start">
-            <ListItemAvatar>
-              <Avatar
-                src={review?.user_image || "/images/default-avatar.png"}
-                alt={review.username}
+      {reviews &&
+        reviews?.map((review, index) => (
+          <React.Fragment key={review.review_id}>
+            <ListItem alignItems="flex-start">
+              <ListItemAvatar>
+                <Avatar
+                  src={review?.user_image || "/images/default-avatar.png"}
+                  alt={review.username}
+                />
+              </ListItemAvatar>
+              <ListItemText
+                primary={
+                  <Box
+                    sx={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      {review.username}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {formatDate(review.created_at)}
+                    </Typography>
+                  </Box>
+                }
+                secondary={
+                  <Box sx={{ mt: 1 }}>
+                    <Rating
+                      value={review.rating}
+                      size="small"
+                      readOnly
+                      sx={{ mb: 1 }}
+                    />
+                    <Typography variant="body2" color="text.primary" paragraph>
+                      {review.comment}
+                    </Typography>
+                  </Box>
+                }
               />
-            </ListItemAvatar>
-            <ListItemText
-              primary={
-                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    {review.username}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {formatDate(review.created_at)}
-                  </Typography>
-                </Box>
-              }
-              secondary={
-                <Box sx={{ mt: 1 }}>
-                  <Rating
-                    value={review.rating}
-                    size="small"
-                    readOnly
-                    sx={{ mb: 1 }}
-                  />
-                  <Typography variant="body2" color="text.primary" paragraph>
-                    {review.comment}
-                  </Typography>
-                </Box>
-              }
-            />
-          </ListItem>
-          {index < reviews.length - 1 && (
-            <Divider variant="inset" component="li" />
-          )}
-        </React.Fragment>
-      ))}
+            </ListItem>
+            {index < reviews.length - 1 && (
+              <Divider variant="inset" component="li" />
+            )}
+          </React.Fragment>
+        ))}
     </List>
   );
 };

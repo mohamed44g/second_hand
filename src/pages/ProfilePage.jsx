@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Container,
@@ -25,6 +25,7 @@ import {
   DialogContentText,
   DialogTitle,
   InputAdornment,
+  CircularProgress,
 } from "@mui/material";
 import {
   Edit,
@@ -36,30 +37,37 @@ import {
   Visibility,
   VisibilityOff,
   Store,
-  AccountBalanceWallet,
-  Star,
   PhotoCamera,
 } from "@mui/icons-material";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  fetchUserData,
+  updateUserPassword,
+  updateUserData,
+} from "../api/userApi";
+import UserReportsTab from "../components/Reports/UserReportsTab";
+import axiosInstance from "../api/axiosInstance";
+import { user } from "../data/fakedata";
+import toast from "react-hot-toast";
 
 const ProfilePage = () => {
-  // Sample user data
-  const [userData, setUserData] = useState({
-    username: "ahmed123",
-    email: "bdry5647@gmail.com",
-    password: "password123",
-    first_name: "أحمد",
-    last_name: "محمد",
-    phone_number: "01234567890",
-    address: "123 شارع التحرير، القاهرة",
-    identity_image: "https://example.com/images/identity.jpg",
-    is_seller: true,
-    wallet_balance: 5000,
-    rating: 4.8,
-    total_sales: 15,
-    total_purchases: 8,
-    member_since: "2023-01-15",
+  const queryClient = useQueryClient();
+
+  // Fetch user data using useQuery
+  const {
+    data: userResponse,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ["userData"],
+    queryFn: fetchUserData,
+    enabled: false,
   });
 
+  const userData = userResponse?.data || user;
+
+  // State for tabs, edit mode, and password dialog
   const [tabValue, setTabValue] = useState(0);
   const [editMode, setEditMode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -70,8 +78,59 @@ const ProfilePage = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
 
-  // Form state
-  const [formData, setFormData] = useState({ ...userData });
+  // Form state for user data
+  const [formData, setFormData] = useState({
+    username: userData.username || "",
+    email: userData.email || "",
+    first_name: userData.first_name || "",
+    last_name: userData.last_name || "",
+    phone_number: userData.phone_number || "",
+    address: userData.address || "",
+  });
+
+  // Update formData when userData changes
+  useEffect(() => {
+    if (userData) {
+      setFormData({
+        username: userData.username || "",
+        email: userData.email || "",
+        first_name: userData.first_name || "",
+        last_name: userData.last_name || "",
+        phone_number: userData.phone_number || "",
+        address: userData.address || "",
+      });
+    }
+  }, [userData]);
+
+  // Mutation for updating user password
+  const passwordMutation = useMutation({
+    mutationFn: updateUserPassword,
+    onSuccess: () => {
+      setPasswordError("");
+      handlePasswordDialogClose();
+      toast.success("تم تغيير كلمة المرور بنجاح!");
+    },
+    onError: (error) => {
+      setPasswordError(
+        error.response?.data?.message || "حدث خطأ أثناء تغيير كلمة المرور"
+      );
+    },
+  });
+
+  // Mutation for updating user data
+  const userDataMutation = useMutation({
+    mutationFn: updateUserData,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userData"] });
+      setEditMode(false);
+      toast.success("تم تحديث بياناتك المستخدم بنجاح!");
+    },
+    onError: (error) => {
+      toast.error(
+        error.response?.data?.message || "حدث خطأ أثناء تحديث بيانات المستخدم"
+      );
+    },
+  });
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -79,9 +138,15 @@ const ProfilePage = () => {
 
   const handleEditToggle = () => {
     if (editMode) {
-      // Save changes
-      setUserData({ ...formData });
-      setEditMode(false);
+      // Save changes using PATCH /users
+      userDataMutation.mutate({
+        username: formData.username,
+        email: formData.email,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        phone_number: formData.phone_number,
+        address: formData.address,
+      });
     } else {
       setEditMode(true);
     }
@@ -115,11 +180,6 @@ const ProfilePage = () => {
   };
 
   const handlePasswordChange = () => {
-    if (currentPassword !== userData.password) {
-      setPasswordError("كلمة المرور الحالية غير صحيحة");
-      return;
-    }
-
     if (newPassword !== confirmPassword) {
       setPasswordError("كلمة المرور الجديدة وتأكيدها غير متطابقين");
       return;
@@ -130,14 +190,31 @@ const ProfilePage = () => {
       return;
     }
 
-    // Update password
-    setUserData({
-      ...userData,
-      password: newPassword,
+    // Update password using PATCH /users/password
+    passwordMutation.mutate({
+      currentPassword,
+      newPassword,
     });
-    setPasswordError("");
-    handlePasswordDialogClose();
   };
+
+  if (isLoading) {
+    return (
+      <Box sx={{ textAlign: "center", py: 4 }}>
+        <CircularProgress />
+        <Typography variant="body1" sx={{ mt: 2 }}>
+          جاري تحميل بيانات المستخدم...
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Alert severity="error" sx={{ m: 3 }}>
+        حدث خطأ أثناء تحميل بيانات المستخدم: {error?.message || "خطأ غير معروف"}
+      </Alert>
+    );
+  }
 
   return (
     <Container maxWidth="lg" sx={{ py: 6 }}>
@@ -159,7 +236,7 @@ const ProfilePage = () => {
             >
               <Box sx={{ position: "relative" }}>
                 <Avatar
-                  src="/placeholder.svg?height=150&width=150"
+                  src={`${axiosInstance.defaults.baseURL}/${userData.identity_image}`}
                   alt={`${userData.first_name} ${userData.last_name}`}
                   sx={{ width: 120, height: 120, mb: 2 }}
                 />
@@ -191,12 +268,6 @@ const ProfilePage = () => {
                   size="small"
                   sx={{ mr: 1 }}
                 />
-                <Chip
-                  icon={<Star fontSize="small" />}
-                  label={`${userData.rating} ★`}
-                  size="small"
-                  variant="outlined"
-                />
               </Box>
             </Box>
 
@@ -210,63 +281,12 @@ const ProfilePage = () => {
               >
                 عضو منذ
               </Typography>
-              <Typography variant="body1">{userData.member_since}</Typography>
-            </Box>
-
-            <Box sx={{ mb: 2 }}>
-              <Typography
-                variant="subtitle2"
-                color="text.secondary"
-                gutterBottom
-              >
-                عمليات البيع
-              </Typography>
               <Typography variant="body1">
-                {userData.total_sales} عملية
-              </Typography>
-            </Box>
-
-            <Box sx={{ mb: 2 }}>
-              <Typography
-                variant="subtitle2"
-                color="text.secondary"
-                gutterBottom
-              >
-                عمليات الشراء
-              </Typography>
-              <Typography variant="body1">
-                {userData.total_purchases} عملية
+                {new Date(userData.created_at).toLocaleDateString("ar-EG")}
               </Typography>
             </Box>
 
             <Divider sx={{ my: 2 }} />
-
-            <Box sx={{ bgcolor: "background.default", p: 2, borderRadius: 1 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 1,
-                }}
-              >
-                <Typography variant="subtitle1" fontWeight="bold">
-                  رصيد المحفظة
-                </Typography>
-                <AccountBalanceWallet color="primary" />
-              </Box>
-              <Typography
-                variant="h5"
-                color="primary.main"
-                fontWeight="bold"
-                gutterBottom
-              >
-                {userData.wallet_balance} ج.م
-              </Typography>
-              <Button variant="contained" fullWidth sx={{ mt: 1 }}>
-                شحن المحفظة
-              </Button>
-            </Box>
           </Paper>
         </Grid>
 
@@ -282,6 +302,7 @@ const ProfilePage = () => {
                 <Tab label="المعلومات الشخصية" id="tab-0" />
                 <Tab label="إعدادات الحساب" id="tab-1" />
                 <Tab label="الأمان" id="tab-2" />
+                <Tab label="البلاغات المقدمة" id="tab-3" />
               </Tabs>
             </Box>
 
@@ -309,8 +330,13 @@ const ProfilePage = () => {
                       variant={editMode ? "contained" : "outlined"}
                       startIcon={editMode ? <Save /> : <Edit />}
                       onClick={handleEditToggle}
+                      disabled={userDataMutation.isPending}
                     >
-                      {editMode ? "حفظ التغييرات" : "تعديل المعلومات"}
+                      {editMode
+                        ? userDataMutation.isPending
+                          ? "جاري الحفظ..."
+                          : "حفظ التغييرات"
+                        : "تعديل المعلومات"}
                     </Button>
                   </Box>
 
@@ -445,6 +471,7 @@ const ProfilePage = () => {
                               checked={formData.is_seller}
                               onChange={handleSwitchChange}
                               color="primary"
+                              disabled={!editMode}
                             />
                           }
                           label=""
@@ -532,6 +559,16 @@ const ProfilePage = () => {
                 </Box>
               )}
             </Box>
+
+            {/* Reports Tab */}
+            <Box
+              role="tabpanel"
+              hidden={tabValue !== 3}
+              id="tabpanel-3"
+              sx={{ p: 3 }}
+            >
+              {tabValue === 3 && <UserReportsTab />}
+            </Box>
           </Paper>
         </Grid>
       </Grid>
@@ -608,8 +645,14 @@ const ProfilePage = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handlePasswordDialogClose}>إلغاء</Button>
-          <Button onClick={handlePasswordChange} variant="contained">
-            تغيير كلمة المرور
+          <Button
+            onClick={handlePasswordChange}
+            variant="contained"
+            disabled={passwordMutation.isPending}
+          >
+            {passwordMutation.isPending
+              ? "جاري التغيير..."
+              : "تغيير كلمة المرور"}
           </Button>
         </DialogActions>
       </Dialog>

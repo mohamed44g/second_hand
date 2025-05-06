@@ -21,18 +21,19 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  IconButton,
 } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider, DateTimePicker } from "@mui/x-date-pickers";
-import { PhotoCamera } from "@mui/icons-material";
+import { PhotoCamera, Close as CloseIcon } from "@mui/icons-material";
 import { useMutation } from "@tanstack/react-query";
 import { addProduct, addAuction, fetchCategories } from "../../api/productApi";
 import { useQuery } from "@tanstack/react-query";
 
 const AddProductForm = ({ open, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [previewUrls, setPreviewUrls] = useState([]);
   const [formErrors, setFormErrors] = useState({});
 
   const {
@@ -62,6 +63,7 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
     is_auction: false,
     auction_end_time: null,
     minimum_increment: "",
+    minimumNonCancellablePrice: "", // New field added
     file: null,
   });
 
@@ -76,6 +78,7 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
           device_id: deviceId,
           minimum_increment: +formData.minimum_increment,
           auction_end_time: formData.auction_end_time,
+          minimumNonCancellablePrice: +formData.minimumNonCancellablePrice, // Include the new field
         };
         addAuctionMutation.mutate(auctionData);
       } else {
@@ -115,10 +118,11 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
       is_auction: false,
       auction_end_time: null,
       minimum_increment: "",
+      minimumNonCancellablePrice: "", // Reset the new field
       file: null,
     });
-    setSelectedFile(null);
-    setPreviewUrl("");
+    setSelectedFiles([]);
+    setPreviewUrls([]);
     setFormErrors({});
   };
 
@@ -155,6 +159,9 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
       // Reset auction-specific fields if turning off auction
       auction_end_time: checked ? formData.auction_end_time : null,
       minimum_increment: checked ? formData.minimum_increment : "",
+      minimumNonCancellablePrice: checked
+        ? formData.minimumNonCancellablePrice
+        : "", // Reset the new field
       // Set current price to starting price for auctions
       current_price: checked ? formData.starting_price : formData.current_price,
     });
@@ -168,22 +175,28 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    console.log(e.target.files[0]);
-    if (file) {
-      setSelectedFile(file);
-      setFormData({
-        ...formData,
-        file: file,
-      });
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      setSelectedFiles((prevFiles) => [...prevFiles, ...files]);
 
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPreviewUrl(reader.result);
-      };
-      reader.readAsDataURL(file);
+      // Create preview URLs for all files
+      const newPreviewUrls = [];
+      files.forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          newPreviewUrls.push(reader.result);
+          if (newPreviewUrls.length === files.length) {
+            setPreviewUrls((prevUrls) => [...prevUrls, ...newPreviewUrls]);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
     }
+  };
+
+  const handleRemoveImage = (index) => {
+    setSelectedFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
+    setPreviewUrls((prevUrls) => prevUrls.filter((_, i) => i !== index));
   };
 
   const validateForm = () => {
@@ -216,9 +229,24 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
       )
         errors.minimum_increment =
           "يجب أن يكون الحد الأدنى للزيادة رقماً موجباً";
+      if (!formData.minimumNonCancellablePrice)
+        errors.minimumNonCancellablePrice =
+          "الحد الأدنى لغير القابل للإلغاء مطلوب";
+      if (
+        isNaN(Number(formData.minimumNonCancellablePrice)) ||
+        Number(formData.minimumNonCancellablePrice) <= 0
+      )
+        errors.minimumNonCancellablePrice =
+          "يجب أن يكون الحد الأدنى لغير القابل للإلغاء رقماً موجباً";
+      if (
+        Number(formData.minimumNonCancellablePrice) <
+        Number(formData.starting_price)
+      )
+        errors.minimumNonCancellablePrice =
+          "يجب أن يكون الحد الأدنى لغير القابل للإلغاء أكبر من أو يساوي السعر المبدئي";
     }
 
-    if (!selectedFile) errors.file = "صورة المنتج مطلوبة";
+    if (selectedFiles.length === 0) errors.file = "صورة المنتج مطلوبة";
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -249,9 +277,12 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
     // إضافة حقل is_auction فقط (بدون تفاصيل المزاد)
     productFormData.append("is_auction", formData.is_auction);
 
-    // إضافة الصورة
-    if (selectedFile) {
-      productFormData.append("file", selectedFile);
+    // إضافة الصور
+    if (selectedFiles.length > 0) {
+      console.log("selectedFiles", selectedFiles);
+      selectedFiles.forEach((file, index) => {
+        productFormData.append("file", file);
+      });
     }
 
     // إرسال طلب إضافة المنتج
@@ -291,34 +322,59 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
                 textAlign: "center",
               }}
             >
-              {previewUrl ? (
-                <Box
-                  sx={{ position: "relative", width: "100%", height: "100%" }}
-                >
-                  <img
-                    src={previewUrl || "/placeholder.svg"}
-                    alt="Product preview"
-                    style={{
-                      width: "100%",
-                      height: "auto",
-                      maxHeight: "250px",
-                      objectFit: "contain",
-                      borderRadius: "8px",
-                    }}
-                  />
+              {previewUrls.length > 0 ? (
+                <Box sx={{ width: "100%" }}>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                    {previewUrls.map((url, index) => (
+                      <Box
+                        key={index}
+                        sx={{
+                          position: "relative",
+                          width: "calc(50% - 4px)",
+                          mb: 1,
+                        }}
+                      >
+                        <img
+                          src={url || "/placeholder.svg"}
+                          alt={`Preview ${index + 1}`}
+                          style={{
+                            width: "100%",
+                            height: "120px",
+                            objectFit: "cover",
+                            borderRadius: "8px",
+                          }}
+                        />
+                        <IconButton
+                          size="small"
+                          sx={{
+                            position: "absolute",
+                            top: 4,
+                            right: 4,
+                            bgcolor: "rgba(255, 255, 255, 0.8)",
+                            "&:hover": { bgcolor: "rgba(255, 255, 255, 0.9)" },
+                          }}
+                          onClick={() => handleRemoveImage(index)}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    ))}
+                  </Box>
                   <Button
                     variant="contained"
                     component="label"
                     startIcon={<PhotoCamera />}
                     sx={{ mt: 2 }}
                     size="small"
+                    fullWidth
                   >
-                    تغيير الصورة
+                    إضافة المزيد من الصور
                     <input
                       type="file"
                       hidden
                       accept="image/*"
                       onChange={handleFileChange}
+                      multiple
                     />
                   </Button>
                 </Box>
@@ -328,22 +384,23 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
                     sx={{ fontSize: 60, color: "text.secondary", mb: 2 }}
                   />
                   <Typography variant="body1" gutterBottom>
-                    قم برفع صورة للمنتج
+                    قم برفع صور للمنتج
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    يفضل صورة بخلفية بيضاء أو سوداء بدقة عالية
+                    يمكنك رفع أكثر من صورة للمنتج
                   </Typography>
                   <Button
                     variant="contained"
                     component="label"
                     startIcon={<PhotoCamera />}
                   >
-                    اختيار صورة
+                    اختيار الصور
                     <input
                       type="file"
                       hidden
                       accept="image/*"
                       onChange={handleFileChange}
+                      multiple
                     />
                   </Button>
                   {formErrors.file && (
@@ -542,6 +599,24 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
                       }}
                       error={!!formErrors.minimum_increment}
                       helperText={formErrors.minimum_increment}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="الحد الأدنى لغير القابل للإلغاء"
+                      name="minimumNonCancellablePrice"
+                      value={formData.minimumNonCancellablePrice}
+                      onChange={handleInputChange}
+                      fullWidth
+                      required
+                      type="number"
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">ج.م</InputAdornment>
+                        ),
+                      }}
+                      error={!!formErrors.minimumNonCancellablePrice}
+                      helperText={formErrors.minimumNonCancellablePrice}
                     />
                   </Grid>
                 </>

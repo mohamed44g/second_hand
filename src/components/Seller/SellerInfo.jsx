@@ -2,10 +2,6 @@ import {
   Box,
   Typography,
   Chip,
-  Rating,
-  Button,
-  Divider,
-  Grid,
 } from "@mui/material";
 import {
   Verified as VerifiedIcon,
@@ -44,15 +40,6 @@ const SellerInfo = ({ seller }) => {
             variant="outlined"
           />
         </Box>
-
-        <Button
-          variant="contained"
-          startIcon={<ChatIcon />}
-          component={Link}
-          to={`/chat/${seller.user_id}`}
-        >
-          محادثة
-        </Button>
       </Box>
     </Box>
   );

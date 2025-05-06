@@ -22,6 +22,7 @@ const ReviewsSection = ({ deviceId }) => {
       const response = await axiosInstance.get(`/reviews/device/${deviceId}`);
       return response.data?.data;
     },
+    enabled: !!deviceId,
   });
 
   const handleReviewSuccess = () => {
@@ -34,8 +35,6 @@ const ReviewsSection = ({ deviceId }) => {
       setReviewAdded(false);
     }, 5000);
   };
-
-  console.log(reviewsData);
 
   // حساب متوسط التقييمات وعددها
   const calculateRatingStats = () => {

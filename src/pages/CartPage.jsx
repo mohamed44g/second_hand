@@ -29,6 +29,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchCart, removeFromCart, checkoutCart } from "../api/cartApi";
 import CheckoutForm from "../components/Checkout/CheckoutForm";
 import { cart } from "../data/fakedata";
+import axiosInstance from "../api/axiosInstance";
 
 const CartPage = () => {
   const [openCheckoutDialog, setOpenCheckoutDialog] = useState(false);
@@ -46,7 +47,6 @@ const CartPage = () => {
   } = useQuery({
     queryKey: ["cart"],
     queryFn: fetchCart,
-    enabled: false,
   });
 
   // حذف منتج من عربة التسوق
@@ -190,10 +190,7 @@ const CartPage = () => {
                     <Grid item xs={12} sm={3}>
                       <CardMedia
                         component="img"
-                        image={
-                          item.image_url ||
-                          "/placeholder.svg?height=150&width=150"
-                        }
+                        image={`${axiosInstance.defaults.baseURL}/${item.image_url}`}
                         alt={item.name}
                         sx={{
                           width: "100%",

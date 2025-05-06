@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Paper,
@@ -12,142 +12,76 @@ import {
   TableHead,
   TableRow,
   TablePagination,
-  Chip,
   TextField,
   InputAdornment,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Collapse,
-  IconButton,
+  CircularProgress,
+  Alert,
+  Snackbar,
+  Chip,
+  Button,
 } from "@mui/material";
 import {
   Search as SearchIcon,
-  KeyboardArrowDown,
-  KeyboardArrowUp,
+  LocalShipping as ShippingIcon,
+  CheckCircle as CheckCircleIcon,
 } from "@mui/icons-material";
-import { fakeOrders } from "../../data/fakeAdminData";
+import axiosInstance from "../../api/axiosInstance";
 
-// مكون صف قابل للتوسيع لعرض تفاصيل الطلب
-const ExpandableRow = ({ order }) => {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <>
-      <TableRow sx={{ "& > *": { borderBottom: "unset" } }}>
-        <TableCell>
-          <IconButton size="small" onClick={() => setOpen(!open)}>
-            {open ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
-          </IconButton>
-        </TableCell>
-        <TableCell>{order.order_id}</TableCell>
-        <TableCell>{order.user_name || `المستخدم #${order.user_id}`}</TableCell>
-        <TableCell>
-          {order.seller_name || `البائع #${order.seller_id}`}
-        </TableCell>
-        <TableCell>
-          {order.device_name || `المنتج #${order.device_id}`}
-        </TableCell>
-        <TableCell>{order.payment_amount} ج.م</TableCell>
-        <TableCell>
-          {new Date(order.order_date).toLocaleDateString("ar-EG")}
-        </TableCell>
-        <TableCell>
-          <Chip
-            label={getStatusLabel(order.status)}
-            color={getStatusColor(order.status)}
-            variant={order.status === "cancelled" ? "outlined" : "filled"}
-          />
-        </TableCell>
-      </TableRow>
-      <TableRow>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
-          <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box sx={{ margin: 2 }}>
-              <Typography variant="h6" gutterBottom component="div">
-                تفاصيل الطلب
-              </Typography>
-              <Table size="small" aria-label="purchases">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>عنوان الشحن</TableCell>
-                    <TableCell>طريقة الدفع</TableCell>
-                    <TableCell>شركة الشحن</TableCell>
-                    <TableCell>رقم التتبع</TableCell>
-                    <TableCell>تاريخ التسليم</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  <TableRow>
-                    <TableCell>
-                      {order.shipping_address || "غير متوفر"}
-                    </TableCell>
-                    <TableCell>{order.payment_method || "غير متوفر"}</TableCell>
-                    <TableCell>
-                      {order.shipping_company || "غير متوفر"}
-                    </TableCell>
-                    <TableCell>
-                      {order.tracking_number || "غير متوفر"}
-                    </TableCell>
-                    <TableCell>
-                      {order.delivery_date
-                        ? new Date(order.delivery_date).toLocaleDateString(
-                            "ar-EG"
-                          )
-                        : "غير متوفر"}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </Box>
-          </Collapse>
-        </TableCell>
-      </TableRow>
-    </>
-  );
+// تعريف ألوان حالات الطلبات
+const statusColors = {
+  processing: "warning",
+  shipped: "info",
+  delivered: "success",
+  cancelled: "error",
 };
 
-// دالة للحصول على نص حالة الطلب
-const getStatusLabel = (status) => {
-  switch (status) {
-    case "processing":
-      return "قيد المعالجة";
-    case "shipped":
-      return "تم الشحن";
-    case "delivered":
-      return "تم التسليم";
-    case "cancelled":
-      return "ملغي";
-    default:
-      return status;
-  }
-};
-
-// دالة للحصول على لون حالة الطلب
-const getStatusColor = (status) => {
-  switch (status) {
-    case "processing":
-      return "warning";
-    case "shipped":
-      return "info";
-    case "delivered":
-      return "success";
-    case "cancelled":
-      return "error";
-    default:
-      return "default";
-  }
+// تعريف ترجمات حالات الطلبات
+const statusTranslations = {
+  processing: "قيد المعالجة",
+  shipped: "تم الشحن",
+  delivered: "تم التوصيل",
+  cancelled: "ملغي",
 };
 
 const OrdersManagement = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
-  // استخدام البيانات الوهمية
-  const orders = fakeOrders;
+  // استخدام البيانات الحقيقية
+  const [orders, setOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // جلب بيانات الطلبات
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axiosInstance.get("/admin/orders");
+        if (response.data.status === "success") {
+          setOrders(response.data.data);
+        } else {
+          setError("فشل في جلب بيانات الطلبات");
+        }
+      } catch (err) {
+        setError(
+          err.response?.data?.message || "حدث خطأ أثناء جلب بيانات الطلبات"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -163,30 +97,78 @@ const OrdersManagement = () => {
     setPage(0);
   };
 
-  const handleStatusFilterChange = (event) => {
-    setStatusFilter(event.target.value);
-    setPage(0);
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
   };
 
-  // تصفية الطلبات حسب البحث والحالة
-  const filteredOrders = orders.filter((order) => {
-    // تصفية حسب البحث
-    const searchMatch =
-      order.user_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.seller_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.device_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.order_id.toString().includes(searchQuery);
+  const handleMenuOpen = (event, order) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedOrder(order);
+  };
 
-    // تصفية حسب الحالة
-    const statusMatch = statusFilter === "all" || order.status === statusFilter;
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
 
-    return searchMatch && statusMatch;
-  });
+  const handleStatusChange = async (newStatus) => {
+    if (selectedOrder) {
+      try {
+        setIsLoading(true);
+        const response = await axiosInstance.patch(
+          `/admin/orders/${selectedOrder.order_id}`,
+          {
+            status: newStatus,
+          }
+        );
 
-  // حساب إجمالي المبيعات
-  const totalRevenue = filteredOrders.reduce((total, order) => {
-    return total + (order.payment_amount || 0);
-  }, 0);
+        if (response.data.status === "success") {
+          // تحديث حالة الطلب في القائمة
+          setOrders(
+            orders.map((order) => {
+              if (order.order_id === selectedOrder.order_id) {
+                return { ...order, status: newStatus };
+              }
+              return order;
+            })
+          );
+
+          setSnackbar({
+            open: true,
+            message: `تم تحديث حالة الطلب إلى "${statusTranslations[newStatus]}" بنجاح`,
+            severity: "success",
+          });
+        } else {
+          setSnackbar({
+            open: true,
+            message: "فشل في تحديث حالة الطلب",
+            severity: "error",
+          });
+        }
+      } catch (err) {
+        setSnackbar({
+          open: true,
+          message:
+            err.response?.data?.message || "حدث خطأ أثناء تحديث حالة الطلب",
+          severity: "error",
+        });
+      } finally {
+        setIsLoading(false);
+        handleMenuClose();
+      }
+    }
+  };
+
+  // تصفية الطلبات حسب البحث
+  const filteredOrders = orders.filter(
+    (order) =>
+      order.order_id.toString().includes(searchQuery) ||
+      order.buyer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.seller?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.product?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      statusTranslations[order.status]
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase())
+  );
 
   // تقسيم الطلبات حسب الصفحة
   const paginatedOrders = filteredOrders.slice(
@@ -207,104 +189,136 @@ const OrdersManagement = () => {
         <Typography variant="h5" component="h2" fontWeight="bold">
           إدارة الطلبات
         </Typography>
-        <Box sx={{ display: "flex", gap: 2 }}>
-          <TextField
-            placeholder="بحث عن طلب..."
-            size="small"
-            value={searchQuery}
-            onChange={handleSearchChange}
-            sx={{ width: 250 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
-          <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel id="status-filter-label">حالة الطلب</InputLabel>
-            <Select
-              labelId="status-filter-label"
-              id="status-filter"
-              value={statusFilter}
-              label="حالة الطلب"
-              onChange={handleStatusFilterChange}
-            >
-              <MenuItem value="all">الكل</MenuItem>
-              <MenuItem value="processing">قيد المعالجة</MenuItem>
-              <MenuItem value="shipped">تم الشحن</MenuItem>
-              <MenuItem value="delivered">تم التسليم</MenuItem>
-              <MenuItem value="cancelled">ملغي</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
+        <TextField
+          placeholder="بحث عن طلب..."
+          size="small"
+          value={searchQuery}
+          onChange={handleSearchChange}
+          sx={{ width: 300 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
       </Box>
 
-      {/* إجمالي المبيعات */}
-      <Paper
-        sx={{
-          p: 3,
-          mb: 3,
-          bgcolor: "primary.light",
-          color: "primary.contrastText",
-        }}
-      >
-        <Typography variant="h6" gutterBottom>
-          إجمالي المبيعات
-        </Typography>
-        <Typography variant="h4" fontWeight="bold">
-          {totalRevenue.toLocaleString()} ج.م
-        </Typography>
-        <Typography variant="body2">
-          من إجمالي {filteredOrders.length} طلب{" "}
-          {statusFilter !== "all" ? `(${getStatusLabel(statusFilter)})` : ""}
-        </Typography>
-      </Paper>
-
-      <Paper>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell />
-                <TableCell>رقم الطلب</TableCell>
-                <TableCell>المستخدم</TableCell>
-                <TableCell>البائع</TableCell>
-                <TableCell>المنتج</TableCell>
-                <TableCell>المبلغ</TableCell>
-                <TableCell>تاريخ الطلب</TableCell>
-                <TableCell>الحالة</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {paginatedOrders.length === 0 ? (
+      {isLoading && orders.length === 0 ? (
+        <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      ) : (
+        <Paper>
+          <TableContainer>
+            <Table>
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={8} align="center">
-                    لا توجد بيانات للعرض
-                  </TableCell>
+                  <TableCell>رقم الطلب</TableCell>
+                  <TableCell>المنتج</TableCell>
+                  <TableCell>المشتري</TableCell>
+                  <TableCell>البائع</TableCell>
+                  <TableCell>المبلغ</TableCell>
+                  <TableCell>تاريخ الطلب</TableCell>
+                  <TableCell>الحالة</TableCell>
+                  <TableCell>الإجراءات</TableCell>
                 </TableRow>
-              ) : (
-                paginatedOrders.map((order) => (
-                  <ExpandableRow key={order.order_id} order={order} />
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          component="div"
-          count={filteredOrders.length}
-          page={page}
-          onPageChange={handleChangePage}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-          labelRowsPerPage="عدد الصفوف في الصفحة:"
-          labelDisplayedRows={({ from, to, count }) =>
-            `${from}-${to} من ${count}`
-          }
-        />
-      </Paper>
+              </TableHead>
+              <TableBody>
+                {paginatedOrders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center">
+                      لا توجد بيانات للعرض
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedOrders.map((order) => (
+                    <TableRow key={order.order_id}>
+                      <TableCell>#{order.order_id}</TableCell>
+                      <TableCell>{order.product}</TableCell>
+                      <TableCell>{order.buyer}</TableCell>
+                      <TableCell>{order.seller}</TableCell>
+                      <TableCell>
+                        {order.total_price || "غير محدد"} ج.م
+                      </TableCell>
+                      <TableCell>
+                        {new Date(order.order_date).toLocaleDateString("ar-EG")}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={
+                            statusTranslations[order.status] || order.status
+                          }
+                          color={statusColors[order.status] || "default"}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: "flex", gap: 1 }}>
+                          {order.status !== "shipped" && (
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              startIcon={<ShippingIcon />}
+                              onClick={() => handleStatusChange("shipped")}
+                              color="info"
+                            >
+                              تم الشحن
+                            </Button>
+                          )}
+                          {order.status !== "delivered" && (
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              startIcon={<CheckCircleIcon />}
+                              onClick={() => handleStatusChange("delivered")}
+                              color="success"
+                            >
+                              تم التسليم
+                            </Button>
+                          )}
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            component="div"
+            count={filteredOrders.length}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            labelRowsPerPage="عدد الصفوف في الصفحة:"
+            labelDisplayedRows={({ from, to, count }) =>
+              `${from}-${to} من ${count}`
+            }
+          />
+        </Paper>
+      )}
+
+      {/* Snackbar للإشعارات */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

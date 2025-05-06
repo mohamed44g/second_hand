@@ -17,6 +17,12 @@ import {
   CircularProgress,
   Alert,
   Snackbar,
+  IconButton,
+  Tooltip,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import {
   ShoppingCart,
@@ -26,6 +32,9 @@ import {
   Verified,
   Security,
   Gavel,
+  Flag as FlagIcon,
+  Share as ShareIcon,
+  MoreVert as MoreVertIcon,
 } from "@mui/icons-material";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -35,6 +44,7 @@ import CheckoutForm from "../components/Checkout/CheckoutForm";
 import { addToCart } from "../api/cartApi";
 import { purchaseProduct } from "../api/cartApi";
 import { startNewChat } from "../api/chatApi";
+import ReportDialog from "../components/ReportDialog";
 import { device } from "../data/fakedata";
 
 // إضافة دالة لجلب بيانات المنتج
@@ -52,6 +62,10 @@ const ProductPage = () => {
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [reportEntityType, setReportEntityType] = useState("");
+  const [reportEntityId, setReportEntityId] = useState(null);
+  const [anchorEl, setAnchorEl] = useState(null);
 
   const navigate = useNavigate();
 
@@ -110,6 +124,11 @@ const ProductPage = () => {
   };
 
   const handleBuyNow = () => {
+    if (product.is_auction) {
+      // المنتج مزاد، سيتم التعامل معه بشكل مختلف
+      return;
+    }
+
     setOpenCheckoutForm(true);
   };
 
@@ -151,6 +170,39 @@ const ProductPage = () => {
     }
   };
 
+  // فتح قائمة المزيد من الخيارات
+  const handleOpenMenu = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  // إغلاق قائمة المزيد من الخيارات
+  const handleCloseMenu = () => {
+    setAnchorEl(null);
+  };
+
+  // فتح نافذة الإبلاغ عن المنتج
+  const handleReportProduct = () => {
+    setReportEntityType("device");
+    setReportEntityId(product.device_id);
+    setReportDialogOpen(true);
+    handleCloseMenu();
+  };
+
+  // فتح نافذة الإبلاغ عن البائع
+  const handleReportSeller = () => {
+    setReportEntityType("user");
+    setReportEntityId(product.seller_id);
+    setReportDialogOpen(true);
+  };
+
+  // إغلاق نافذة الإبلاغ
+  const handleCloseReportDialog = (success) => {
+    setReportDialogOpen(false);
+    if (success) {
+      showSnackbar("تم تقديم البلاغ بنجاح", "success");
+    }
+  };
+
   // عرض حالة التحميل
   if (isLoading) {
     return (
@@ -178,11 +230,13 @@ const ProductPage = () => {
   }
 
   // استخراج بيانات المنتج من الاستجابة
-  const product = productData?.data || device;
+  const product = productData?.data?.product || device;
 
-  // تحويل صورة المنتج إلى مصفوفة للعرض
-  const productImages = product.image_url
-    ? [product.image_url]
+  // استخراج صور المنتج من الاستجابة
+  const productImages = productData?.data?.images?.length
+    ? productData.data.images.map(
+        (img) => `${axiosInstance.defaults.baseURL}/${img.image_path}`
+      )
     : ["/placeholder.svg?height=500&width=500"];
 
   // تحويل المواصفات إلى تنسيق مناسب للعرض
@@ -200,6 +254,18 @@ const ProductPage = () => {
       value: new Date(product.created_at).toLocaleDateString("ar-EG"),
     },
   ];
+
+  // إضافة معلومات المزاد إذا كان المنتج مزاداً
+  if (product.is_auction) {
+    specifications.push(
+      { name: "نوع البيع", value: "مزاد" },
+      {
+        name: "تاريخ انتهاء المزاد",
+        value: new Date(product.auction_end_time).toLocaleDateString("ar-EG"),
+      },
+      { name: "الحد الأدنى للزيادة", value: `${product.minimum_increment} ج.م` }
+    );
+  }
 
   return (
     <Container maxWidth="lg" sx={{ py: 6 }}>
@@ -245,9 +311,10 @@ const ProductPage = () => {
               alt={product.name}
               sx={{
                 width: "100%",
-                height: "auto",
+                height: "400px",
+                objectFit: "contain",
                 borderRadius: 2,
-                bgcolor: "black",
+                background: "linear-gradient(to right, #111, #333)",
                 mb: 2,
               }}
             />
@@ -263,6 +330,96 @@ const ProductPage = () => {
                 }}
               />
             )}
+
+            {/* أزرار التنقل بين الصور */}
+            {productImages.length > 1 && (
+              <>
+                <IconButton
+                  sx={{
+                    position: "absolute",
+                    top: "50%",
+                    right: 8,
+                    transform: "translateY(-50%)",
+                    bgcolor: "rgba(255, 255, 255, 0.8)",
+                    "&:hover": { bgcolor: "rgba(255, 255, 255, 0.9)" },
+                  }}
+                  onClick={() =>
+                    setSelectedImage(
+                      (prev) => (prev + 1) % productImages.length
+                    )
+                  }
+                >
+                  <ArrowBack sx={{ transform: "rotate(180deg)" }} />
+                </IconButton>
+                <IconButton
+                  sx={{
+                    position: "absolute",
+                    top: "50%",
+                    left: 8,
+                    transform: "translateY(-50%)",
+                    bgcolor: "rgba(255, 255, 255, 0.8)",
+                    "&:hover": { bgcolor: "rgba(255, 255, 255, 0.9)" },
+                  }}
+                  onClick={() =>
+                    setSelectedImage((prev) =>
+                      prev === 0 ? productImages.length - 1 : prev - 1
+                    )
+                  }
+                >
+                  <ArrowBack />
+                </IconButton>
+              </>
+            )}
+
+            {/* أيقونة الإبلاغ عن المنتج */}
+            <Tooltip title="المزيد من الخيارات" arrow>
+              <IconButton
+                sx={{
+                  position: "absolute",
+                  top: 16,
+                  left: 16,
+                  bgcolor: "rgba(255, 255, 255, 0.8)",
+                  "&:hover": { bgcolor: "rgba(255, 255, 255, 0.9)" },
+                }}
+                onClick={handleOpenMenu}
+              >
+                <MoreVertIcon />
+              </IconButton>
+            </Tooltip>
+
+            {/* قائمة المزيد من الخيارات */}
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleCloseMenu}
+              anchorOrigin={{
+                vertical: "bottom",
+                horizontal: "left",
+              }}
+              transformOrigin={{
+                vertical: "top",
+                horizontal: "left",
+              }}
+            >
+              <MenuItem onClick={handleReportProduct}>
+                <ListItemIcon>
+                  <FlagIcon fontSize="small" color="error" />
+                </ListItemIcon>
+                <ListItemText primary="الإبلاغ عن هذا المنتج" />
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  handleCloseMenu();
+                  showSnackbar("تم نسخ الرابط", "success");
+                }}
+              >
+                <ListItemIcon>
+                  <ShareIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="مشاركة المنتج" />
+              </MenuItem>
+            </Menu>
           </Box>
           {productImages.length > 1 && (
             <Box sx={{ display: "flex", gap: 2, overflowX: "auto", pb: 1 }}>
@@ -276,6 +433,7 @@ const ProductPage = () => {
                   sx={{
                     width: 80,
                     height: 80,
+                    objectFit: "cover",
                     borderRadius: 1,
                     cursor: "pointer",
                     border:
@@ -284,7 +442,7 @@ const ProductPage = () => {
                         : "2px solid transparent",
                     borderColor:
                       selectedImage === index ? "primary.main" : "transparent",
-                    bgcolor: "black",
+                    bgcolor: "background.paper",
                   }}
                 />
               ))}
@@ -389,11 +547,22 @@ const ProductPage = () => {
               <Button
                 variant="outlined"
                 startIcon={<Chat />}
-                sx={{ ml: "auto" }}
+                sx={{ ml: "auto", mr: 1 }}
                 onClick={handleChatWithSeller}
               >
                 محادثة
               </Button>
+
+              {/* أيقونة الإبلاغ عن البائع */}
+              <Tooltip title="الإبلاغ عن البائع" arrow>
+                <IconButton
+                  color="error"
+                  size="small"
+                  onClick={handleReportSeller}
+                >
+                  <FlagIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             </Box>
 
             <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
@@ -520,6 +689,14 @@ const ProductPage = () => {
         products={[{ ...product, quantity: quantity }]}
         totalAmount={product.current_price * quantity}
         isSingleProduct={true}
+      />
+
+      {/* نافذة الإبلاغ */}
+      <ReportDialog
+        open={reportDialogOpen}
+        onClose={handleCloseReportDialog}
+        entityType={reportEntityType}
+        entityId={reportEntityId}
       />
 
       {/* Snackbar للإشعارات */}

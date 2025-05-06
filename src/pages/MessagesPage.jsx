@@ -28,12 +28,8 @@ const MessagesPage = () => {
   //   const getChats = async () => {
   //     try {
   //       const response = await fetchUserChats();
-  //       if (response.status === "success") {
-  //         setConversations(response.data || []);
-  //       } else {
-  //         // يمكن إضافة إشعار هنا إذا كان هناك خطأ
-  //         console.error("حدث خطأ أثناء جلب المحادثات");
-  //       }
+  //       console.log("response", response.data);
+  //       setConversations(response.data);
   //     } catch (error) {
   //       console.error("حدث خطأ:", error);
   //     }
@@ -42,7 +38,6 @@ const MessagesPage = () => {
   //   getChats();
   // }, []);
 
-  console.log("Conversations:", conversations);
 
   return (
     <Container maxWidth="lg" sx={{ py: 6 }}>

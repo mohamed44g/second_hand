@@ -47,33 +47,9 @@ const OrdersPage = () => {
   } = useQuery({
     queryKey: ["userOrders"],
     queryFn: fetchUserOrders,
-    enabled: false, // لا يتم تفعيل الاستعلام تلقائيًا
   });
 
-  // إلغاء طلب
-  const cancelOrderMutation = useMutation({
-    mutationFn: cancelOrder,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userOrders"] });
-      handleCloseCancelDialog();
-    },
-  });
 
-  const handleOpenCancelDialog = (orderId) => {
-    setSelectedOrderId(orderId);
-    setOpenCancelDialog(true);
-  };
-
-  const handleCloseCancelDialog = () => {
-    setOpenCancelDialog(false);
-    setSelectedOrderId(null);
-  };
-
-  const handleCancelOrder = () => {
-    if (selectedOrderId) {
-      cancelOrderMutation.mutate(selectedOrderId);
-    }
-  };
 
   // استخراج بيانات الطلبات
   const orders = ordersData?.data || fakeOrder;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Paper,
@@ -31,8 +31,10 @@ import {
   Delete as DeleteIcon,
   Search as SearchIcon,
   Store as StoreIcon,
+  Block as BlockIcon,
+  CheckCircle as CheckCircleIcon,
 } from "@mui/icons-material";
-import { fakeSellers } from "../../data/fakeAdminData";
+import axiosInstance from "../../api/axiosInstance";
 
 const SellersManagement = () => {
   const [page, setPage] = useState(0);
@@ -46,9 +48,33 @@ const SellersManagement = () => {
     severity: "success",
   });
 
-  // استخدام البيانات الوهمية
-  const [sellers, setSellers] = useState(fakeSellers);
-  const [isLoading, setIsLoading] = useState(false);
+  // استخدام البيانات الحقيقية
+  const [sellers, setSellers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // جلب بيانات البائعين
+  useEffect(() => {
+    const fetchSellers = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axiosInstance.get("/admin/sellers");
+        if (response.data.status === "success") {
+          setSellers(response.data.data);
+        } else {
+          setError("فشل في جلب بيانات البائعين");
+        }
+      } catch (err) {
+        setError(
+          err.response?.data?.message || "حدث خطأ أثناء جلب بيانات البائعين"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSellers();
+  }, []);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -74,24 +100,125 @@ const SellersManagement = () => {
     setSelectedSeller(null);
   };
 
-  const handleDeleteSeller = () => {
+  const handleDeleteSeller = async () => {
     if (selectedSeller) {
-      // محاكاة عملية الحذف باستخدام البيانات الوهمية
-      setIsLoading(true);
-
-      // محاكاة تأخير الشبكة
-      setTimeout(() => {
-        setSellers(
-          sellers.filter((seller) => seller.user_id !== selectedSeller.user_id)
+      try {
+        setIsLoading(true);
+        const response = await axiosInstance.delete(
+          `/admin/sellers/${selectedSeller.user_id}`
         );
-        handleCloseDeleteDialog();
+        if (response.data.status === "success") {
+          setSellers(
+            sellers.filter(
+              (seller) => seller.user_id !== selectedSeller.user_id
+            )
+          );
+          setSnackbar({
+            open: true,
+            message: "تم حذف البائع بنجاح",
+            severity: "success",
+          });
+        } else {
+          setSnackbar({
+            open: true,
+            message: "فشل في حذف البائع",
+            severity: "error",
+          });
+        }
+      } catch (err) {
         setSnackbar({
           open: true,
-          message: "تم حذف التاجر بنجاح",
+          message: err.response?.data?.message || "حدث خطأ أثناء حذف البائع",
+          severity: "error",
+        });
+      } finally {
+        setIsLoading(false);
+        handleCloseDeleteDialog();
+      }
+    }
+  };
+
+  const handleDisableSeller = async (sellerId) => {
+    try {
+      setIsLoading(true);
+      const response = await axiosInstance.patch(
+        `/admin/sellers/${sellerId}/disable`
+      );
+
+      if (response.data.status === "success") {
+        // تحديث حالة البائع في القائمة
+        setSellers(
+          sellers.map((seller) => {
+            if (seller.user_id === sellerId) {
+              return { ...seller, status: "disabled" };
+            }
+            return seller;
+          })
+        );
+
+        setSnackbar({
+          open: true,
+          message: "تم تعطيل حساب البائع بنجاح",
           severity: "success",
         });
-        setIsLoading(false);
-      }, 800);
+      } else {
+        setSnackbar({
+          open: true,
+          message: "فشل في تعطيل حساب البائع",
+          severity: "error",
+        });
+      }
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message:
+          err.response?.data?.message || "حدث خطأ أثناء تعطيل حساب البائع",
+        severity: "error",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEnableSeller = async (sellerId) => {
+    try {
+      setIsLoading(true);
+      const response = await axiosInstance.patch(
+        `/admin/sellers/${sellerId}/enable`
+      );
+
+      if (response.data.status === "success") {
+        // تحديث حالة البائع في القائمة
+        setSellers(
+          sellers.map((seller) => {
+            if (seller.user_id === sellerId) {
+              return { ...seller, status: "active" };
+            }
+            return seller;
+          })
+        );
+
+        setSnackbar({
+          open: true,
+          message: "تم تفعيل حساب البائع بنجاح",
+          severity: "success",
+        });
+      } else {
+        setSnackbar({
+          open: true,
+          message: "فشل في تفعيل حساب البائع",
+          severity: "error",
+        });
+      }
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message:
+          err.response?.data?.message || "حدث خطأ أثناء تفعيل حساب البائع",
+        severity: "error",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -99,17 +226,15 @@ const SellersManagement = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // تصفية التجار حسب البحث
+  // تصفية البائعين حسب البحث
   const filteredSellers = sellers.filter(
     (seller) =>
       seller.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       seller.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      `${seller.first_name} ${seller.last_name}`
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase())
+      seller.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // تقسيم التجار حسب الصفحة
+  // تقسيم البائعين حسب الصفحة
   const paginatedSellers = filteredSellers.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
@@ -126,10 +251,10 @@ const SellersManagement = () => {
         }}
       >
         <Typography variant="h5" component="h2" fontWeight="bold">
-          إدارة التجار
+          إدارة البائعين
         </Typography>
         <TextField
-          placeholder="بحث عن تاجر..."
+          placeholder="بحث عن بائع..."
           size="small"
           value={searchQuery}
           onChange={handleSearchChange}
@@ -144,10 +269,14 @@ const SellersManagement = () => {
         />
       </Box>
 
-      {isLoading ? (
+      {isLoading && sellers.length === 0 ? (
         <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
           <CircularProgress />
         </Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
       ) : (
         <Paper>
           <TableContainer>
@@ -183,42 +312,63 @@ const SellersManagement = () => {
                           {seller.username}
                         </Box>
                       </TableCell>
-                      <TableCell>
-                        {seller.first_name} {seller.last_name}
-                      </TableCell>
+                      <TableCell>{seller.full_name}</TableCell>
                       <TableCell>{seller.email}</TableCell>
                       <TableCell>
                         <Box sx={{ display: "flex", alignItems: "center" }}>
                           <Rating
-                            value={Number.parseFloat(seller.rating)}
+                            value={Number(seller.rating) || 0}
                             precision={0.5}
                             readOnly
                             size="small"
                           />
                           <Typography variant="body2" sx={{ ml: 1 }}>
-                            ({seller.rating})
+                            ({seller.rating || 0})
                           </Typography>
                         </Box>
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={`${seller.total_sales} منتج`}
+                          label={`${seller.total_sales || 0} منتج`}
                           size="small"
                           color="primary"
                           variant="outlined"
                         />
                       </TableCell>
+                      <TableCell>{seller.revenue || 0} ج.م</TableCell>
                       <TableCell>
-                        {seller.total_revenue.toLocaleString()} ج.م
-                      </TableCell>
-                      <TableCell>
-                        <IconButton
-                          color="error"
-                          onClick={() => handleOpenDeleteDialog(seller)}
-                          title="حذف التاجر"
-                        >
-                          <DeleteIcon />
-                        </IconButton>
+                        <Box sx={{ display: "flex", gap: 1 }}>
+                          {seller.status !== "disabled" ? (
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              startIcon={<BlockIcon />}
+                              onClick={() =>
+                                handleDisableSeller(seller.user_id)
+                              }
+                              color="warning"
+                            >
+                              تعطيل
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              startIcon={<CheckCircleIcon />}
+                              onClick={() => handleEnableSeller(seller.user_id)}
+                              color="success"
+                            >
+                              تفعيل
+                            </Button>
+                          )}
+                          <IconButton
+                            color="error"
+                            onClick={() => handleOpenDeleteDialog(seller)}
+                            title="حذف البائع"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ))
@@ -243,10 +393,10 @@ const SellersManagement = () => {
 
       {/* نافذة تأكيد الحذف */}
       <Dialog open={openDeleteDialog} onClose={handleCloseDeleteDialog}>
-        <DialogTitle>تأكيد حذف التاجر</DialogTitle>
+        <DialogTitle>تأكيد حذف البائع</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            هل أنت متأكد من رغبتك في حذف التاجر "{selectedSeller?.username}"؟
+            هل أنت متأكد من رغبتك في حذف البائع "{selectedSeller?.username}"؟
             هذا الإجراء لا يمكن التراجع عنه.
           </DialogContentText>
         </DialogContent>

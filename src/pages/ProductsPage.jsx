@@ -51,7 +51,7 @@ const ProductsPage = () => {
       const response = await axiosInstance.get("/products", { params });
       return response.data.data.devices;
     },
-    enabled: false, // لا يتم تفعيل الاستعلام تلقائيًا
+    enabled: false,
   });
 
   // التعامل مع تغيير الفلاتر
@@ -66,6 +66,8 @@ const ProductsPage = () => {
   if (error) {
     toast.error(error.response?.data?.message || "حدث خطأ أثناء جلب المنتجات");
   }
+
+  const devicesData = data || devices;
 
   return (
     <Box sx={{ p: 4 }}>
@@ -130,11 +132,11 @@ const ProductsPage = () => {
       {/* عرض المنتجات */}
       {isLoading ? (
         <Typography align="center">جاري التحميل...</Typography>
-      ) : devices?.length > 0 ? (
+      ) : devicesData?.length > 0 ? (
         <Grid container spacing={3}>
-          {devices[0].map((device) => (
+          {devicesData?.map((device) => (
             <Grid item xs={12} sm={6} md={3} key={device.device_id}>
-              <ProductCard device={device} />
+              <ProductCard device={device} isMyProductsPage={false} />
             </Grid>
           ))}
         </Grid>

@@ -65,7 +65,7 @@ const WalletPage = () => {
   } = useQuery({
     queryKey: ["wallet"],
     queryFn: fetchWalletInfo,
-    enabled: false, // لا يتم تفعيل الاستعلام تلقائيًا
+    enabled: false,
   });
 
   // جلب سجل المعاملات
@@ -77,7 +77,7 @@ const WalletPage = () => {
   } = useQuery({
     queryKey: ["walletHistory"],
     queryFn: fetchWalletHistory,
-    enabled: false, // لا يتم تفعيل الاستعلام تلقائيًا
+    enabled: false,
   });
 
   // إيداع مبلغ في المحفظة
@@ -170,9 +170,9 @@ const WalletPage = () => {
 
   // تحديد لون ونوع المعاملة
   const getTransactionColor = (type) => {
-    if (type === "deposit" && type.includes("ايداع")) {
+    if (type === "deposit") {
       return "success.main";
-    } else if (type === "withdraw" || type.includes("سحب")) {
+    } else if (type === "withdraw") {
       return "error.main";
     } else if (type === "purchase") {
       return "success.main";
@@ -183,16 +183,12 @@ const WalletPage = () => {
 
   // تحديد أيقونة المعاملة
   const getTransactionIcon = (type) => {
-    if (type === "deposit" && type.includes("ايداع")) {
+    if (type === "deposit") {
       return <ArrowDownward color="success" />;
-    } else if (type === "withdraw" || type.includes("سحب")) {
+    } else if (type === "withdraw") {
       return <ArrowUpward color="error" />;
     } else if (type === "purchase") {
       return <ShoppingCart color="success" />;
-    } else if (type === "auction") {
-      return <Gavel color="warning" />;
-    } else if (type === "sale") {
-      return <Store color="success" />;
     } else {
       return <ArrowDownward color="primary" />;
     }
@@ -242,7 +238,7 @@ const WalletPage = () => {
                     color="primary.main"
                     fontWeight="bold"
                   >
-                    {walletBalance} ج.م
+                    {parseInt(walletBalance)} ج.م
                   </Typography>
                   {Number(pendingBalance) > 0 && (
                     <Typography
@@ -250,7 +246,7 @@ const WalletPage = () => {
                       color="text.secondary"
                       sx={{ mt: 1 }}
                     >
-                      الرصيد المعلق: {pendingBalance} ج.م
+                      الرصيد المعلق: {parseInt(pendingBalance)} ج.م
                     </Typography>
                   )}
                 </Box>
@@ -356,12 +352,11 @@ const WalletPage = () => {
                             transaction.description.includes("سحب")
                               ? "-"
                               : "+"}
-                            {transaction.amount} ج.م
+                            {parseInt(transaction.amount)} ج.م
                           </Typography>
                           <Chip
                             label={
-                              transaction.transaction_type === "deposit" &&
-                              transaction.description.includes("ايداع")
+                              transaction.transaction_type === "deposit"
                                 ? "إيداع"
                                 : transaction.transaction_type === "withdraw" ||
                                   transaction.description.includes("سحب")
@@ -372,11 +367,9 @@ const WalletPage = () => {
                             }
                             size="small"
                             color={
-                              transaction.transaction_type === "deposit" &&
-                              transaction.description.includes("ايداع")
+                              transaction.transaction_type === "deposit"
                                 ? "success"
-                                : transaction.transaction_type === "withdraw" ||
-                                  transaction.description.includes("سحب")
+                                : transaction.transaction_type === "withdraw"
                                 ? "error"
                                 : "primary"
                             }

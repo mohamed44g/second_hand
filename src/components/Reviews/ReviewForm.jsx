@@ -15,7 +15,7 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "../../api/axiosInstance";
 
-const ReviewForm = ({ deviceId, onSuccess }) => {
+const ReviewForm = ({ deviceId, sellerId, onSuccess }) => {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -24,7 +24,9 @@ const ReviewForm = ({ deviceId, onSuccess }) => {
 
   const addReviewMutation = useMutation({
     mutationFn: async (reviewData) =>
-      await axiosInstance.post("/reviews/device", reviewData),
+      deviceId
+        ? await axiosInstance.post("/reviews/device", reviewData)
+        : await axiosInstance.post("/reviews/seller", reviewData),
     onSuccess: () => {
       // Invalidate and refetch
       // إعادة تحميل التقييمات بعد إضافة تقييم جديد
@@ -49,13 +51,21 @@ const ReviewForm = ({ deviceId, onSuccess }) => {
 
     setRatingError(false);
 
-    const reviewData = {
+    const deviceReviewData = {
       device_id: deviceId,
       rating,
       comment,
     };
 
-    addReviewMutation.mutate(reviewData);
+    const SellerReviewData = {
+      seller_id: sellerId,
+      rating,
+      comment,
+    };
+
+    deviceId
+      ? addReviewMutation.mutate(deviceReviewData)
+      : addReviewMutation.mutate(SellerReviewData);
   };
 
   return (

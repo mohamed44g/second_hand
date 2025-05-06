@@ -29,6 +29,11 @@ import {
   Avatar,
   InputAdornment,
   Snackbar,
+  IconButton,
+  Tooltip,
+  Menu,
+  MenuItem,
+  ListItemIcon,
 } from "@mui/material";
 import {
   Gavel,
@@ -37,8 +42,11 @@ import {
   ArrowBack,
   Cancel,
   CheckCircle,
+  Flag as FlagIcon,
+  Share as ShareIcon,
+  MoreVert as MoreVertIcon,
 } from "@mui/icons-material";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchAuctionDetails,
@@ -50,11 +58,13 @@ import {
 import { format, formatDistanceToNow, isAfter } from "date-fns";
 import { arEG } from "date-fns/locale";
 import { getUserID } from "../utils/checkUser.js"; // تأكد من استيراد الدالة الصحيحة
-import { bid } from "../data/fakedata.js";
+import ReportDialog from "../components/ReportDialog";
+import axiosInstance from "../api/axiosInstance";
+import { toast } from "react-hot-toast";
+import { bid as auctionData } from "../data/fakedata.js";
 
 const AuctionDetailsPage = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [bidAmount, setBidAmount] = useState("");
   const [openBidDialog, setOpenBidDialog] = useState(false);
@@ -64,15 +74,16 @@ const AuctionDetailsPage = () => {
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   const [isCurrentUserSeller, setIsCurrentUserSeller] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(0);
+
+  // إضافة حالة لنافذة الإبلاغ
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [reportEntityType, setReportEntityType] = useState("");
+  const [reportEntityId, setReportEntityId] = useState(null);
+  const [anchorEl, setAnchorEl] = useState(null);
 
   // جلب تفاصيل المزاد
-  const {
-    data: auctionData,
-    isLoading,
-    isError,
-    error,
-    refetch,
-  } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["auction", id],
     queryFn: () => fetchAuctionDetails(id),
     enabled: !!id && false,
@@ -86,7 +97,7 @@ const AuctionDetailsPage = () => {
     error: historyError,
   } = useQuery({
     queryKey: ["bidHistory", id],
-    queryFn: () => fetchBidHistory(id),
+    queryFn: async () => await fetchBidHistory(id),
     enabled: !!id && false,
   });
 
@@ -100,7 +111,9 @@ const AuctionDetailsPage = () => {
       showSnackbar("تم تقديم المزايدة بنجاح", "success");
     },
     onError: (error) => {
-      showSnackbar(`حدث خطأ أثناء تقديم المزايدة: ${error.message}`, "error");
+      if (error.response?.status === 400) {
+        toast.error(error.response.data.message);
+      }
     },
   });
 
@@ -111,10 +124,12 @@ const AuctionDetailsPage = () => {
       queryClient.invalidateQueries({ queryKey: ["auction", id] });
       queryClient.invalidateQueries({ queryKey: ["bidHistory", id] });
       handleCloseCancelDialog();
-      showSnackbar("تم إلغاء المزايدة بنجاح", "success");
+      toast.success("تم إلغاء المزايدة بنجاح");
     },
     onError: (error) => {
-      showSnackbar(`حدث خطأ أثناء إلغاء المزايدة: ${error.message}`, "error");
+      if (error.response?.status === 400) {
+        toast.error(error.response.data.message);
+      }
     },
   });
 
@@ -125,20 +140,21 @@ const AuctionDetailsPage = () => {
       queryClient.invalidateQueries({ queryKey: ["auction", id] });
       queryClient.invalidateQueries({ queryKey: ["bidHistory", id] });
       handleCloseFinalizeDialog();
-      showSnackbar(
-        `تم إنهاء المزاد بنجاح! الفائز: المستخدم رقم ${data.data.winnerId}`,
-        "success"
+      toast.success(
+        `تم إنهاء المزاد بنجاح! الفائز: المستخدم رقم ${data.data.winnerId}`
       );
     },
     onError: (error) => {
-      showSnackbar(`حدث خطأ أثناء إنهاء المزاد: ${error.message}`, "error");
+      if (error.response?.status === 400) {
+        toast.error(error.response.data.message);
+      }
     },
   });
 
   // تعيين الحد الأدنى للمزايدة عند تحميل بيانات المزاد
   useEffect(() => {
-    if (auctionData?.data) {
-      const auction = auctionData.data;
+    if (auctionData?.data?.bid) {
+      const auction = auctionData?.data?.bid;
       const minBid =
         Number(auction.current_price) + Number(auction.minimum_increment);
       setBidAmount(minBid.toString());
@@ -146,10 +162,18 @@ const AuctionDetailsPage = () => {
   }, [auctionData]);
 
   useEffect(() => {
-    if (getUserID() === auctionData?.data.seller_id) {
+    if (getUserID() === auctionData?.data?.bid.seller_id) {
       setIsCurrentUserSeller(true);
     }
-  }, [auctionData?.data.seller_id]);
+  }, [auctionData?.data?.bid.seller_id]);
+
+  // استخراج الصور
+  const productImages = auctionData?.data?.bid.images?.length
+    ? auctionData.data.bid.images.map(
+        // (img) => `${axiosInstance.defaults.baseURL}/${img.image_path}`
+        (img) => `${img.image_path}`
+      )
+    : ["/placeholder.svg?height=500&width=500"];
 
   const handleOpenBidDialog = () => {
     setOpenBidDialog(true);
@@ -206,8 +230,45 @@ const AuctionDetailsPage = () => {
     setOpenSnackbar(false);
   };
 
+  const handleImageClick = (index) => {
+    setSelectedImage(index);
+  };
+
+  // فتح قائمة المزيد من الخيارات
+  const handleOpenMenu = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  // إغلاق قائمة المزيد من الخيارات
+  const handleCloseMenu = () => {
+    setAnchorEl(null);
+  };
+
+  // فتح نافذة الإبلاغ عن المنتج
+  const handleReportProduct = () => {
+    setReportEntityType("device");
+    setReportEntityId(auction.device_id);
+    setReportDialogOpen(true);
+    handleCloseMenu();
+  };
+
+  // إغلاق نافذة الإبلاغ
+  const handleCloseReportDialog = (success) => {
+    setReportDialogOpen(false);
+    if (success) {
+      showSnackbar("تم تقديم البلاغ بنجاح", "success");
+    }
+  };
+
+  // دالة فتح نافذة الإبلاغ
+  const handleOpenReportDialog = (entityType, entityId) => {
+    setReportEntityType(entityType);
+    setReportEntityId(entityId);
+    setReportDialogOpen(true);
+  };
+
   // استخراج بيانات المزاد
-  const auction = auctionData?.data || bid;
+  const auction = auctionData?.data?.bid;
 
   // استخراج سجل المزايدات
   const bidHistory = bidHistoryData?.data || [];
@@ -239,8 +300,6 @@ const AuctionDetailsPage = () => {
     if (!auction) return 0;
     return Number(auction.current_price) + Number(auction.minimum_increment);
   };
-
-  console.log(bidHistory);
 
   return (
     <Container maxWidth="lg" sx={{ py: 6 }}>
@@ -275,10 +334,159 @@ const AuctionDetailsPage = () => {
         </Alert>
       ) : (
         <Grid container spacing={4}>
+          {/* Product Images */}
+          <Grid item xs={12} md={6}>
+            <Box sx={{ position: "relative" }}>
+              <Box
+                component="img"
+                src={productImages[selectedImage]}
+                alt={auction.name}
+                sx={{
+                  width: "100%",
+                  height: "400px",
+                  objectFit: "contain",
+                  borderRadius: 2,
+                  bgcolor: "background.paper",
+                  mb: 2,
+                }}
+              />
+              {auction.is_auction && (
+                <Chip
+                  label="مزاد"
+                  color="primary"
+                  sx={{
+                    position: "absolute",
+                    top: 16,
+                    right: 16,
+                    fontWeight: "bold",
+                  }}
+                />
+              )}
+
+              {/* أزرار التنقل بين الصور */}
+              {productImages.length > 1 && (
+                <>
+                  <IconButton
+                    sx={{
+                      position: "absolute",
+                      top: "50%",
+                      right: 8,
+                      transform: "translateY(-50%)",
+                      bgcolor: "rgba(255, 255, 255, 0.8)",
+                      "&:hover": { bgcolor: "rgba(255, 255, 255, 0.9)" },
+                    }}
+                    onClick={() =>
+                      setSelectedImage(
+                        (prev) => (prev + 1) % productImages.length
+                      )
+                    }
+                  >
+                    <ArrowBack sx={{ transform: "rotate(180deg)" }} />
+                  </IconButton>
+                  <IconButton
+                    sx={{
+                      position: "absolute",
+                      top: "50%",
+                      left: 8,
+                      transform: "translateY(-50%)",
+                      bgcolor: "rgba(255, 255, 255, 0.8)",
+                      "&:hover": { bgcolor: "rgba(255, 255, 255, 0.9)" },
+                    }}
+                    onClick={() =>
+                      setSelectedImage((prev) =>
+                        prev === 0 ? productImages.length - 1 : prev - 1
+                      )
+                    }
+                  >
+                    <ArrowBack />
+                  </IconButton>
+                </>
+              )}
+
+              {/* أيقونة الإبلاغ عن المنتج */}
+              <Tooltip title="المزيد من الخيارات" arrow>
+                <IconButton
+                  sx={{
+                    position: "absolute",
+                    top: 16,
+                    left: 16,
+                    bgcolor: "rgba(255, 255, 255, 0.8)",
+                    "&:hover": { bgcolor: "rgba(255, 255, 255, 0.9)" },
+                  }}
+                  onClick={handleOpenMenu}
+                >
+                  <MoreVertIcon />
+                </IconButton>
+              </Tooltip>
+
+              {/* قائمة المزيد من الخيارات */}
+              <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleCloseMenu}
+                anchorOrigin={{
+                  vertical: "bottom",
+                  horizontal: "left",
+                }}
+                transformOrigin={{
+                  vertical: "top",
+                  horizontal: "left",
+                }}
+              >
+                <MenuItem onClick={handleReportProduct}>
+                  <ListItemIcon>
+                    <FlagIcon fontSize="small" color="error" />
+                  </ListItemIcon>
+                  <ListItemText primary="الإبلاغ عن هذا المنتج" />
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    navigator.clipboard.writeText(window.location.href);
+                    handleCloseMenu();
+                    showSnackbar("تم نسخ الرابط", "success");
+                  }}
+                >
+                  <ListItemIcon>
+                    <ShareIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary="مشاركة المنتج" />
+                </MenuItem>
+              </Menu>
+            </Box>
+            {productImages.length > 1 && (
+              <Box sx={{ display: "flex", gap: 2, overflowX: "auto", pb: 1 }}>
+                {productImages.map((image, index) => (
+                  <Box
+                    key={index}
+                    component="img"
+                    src={image}
+                    alt={`${auction.name} - ${index + 1}`}
+                    onClick={() => handleImageClick(index)}
+                    sx={{
+                      width: 80,
+                      height: 80,
+                      objectFit: "cover",
+                      borderRadius: 1,
+                      cursor: "pointer",
+                      border:
+                        selectedImage === index
+                          ? "2px solid"
+                          : "2px solid transparent",
+                      borderColor:
+                        selectedImage === index
+                          ? "primary.main"
+                          : "transparent",
+                      bgcolor: "background.paper",
+                    }}
+                  />
+                ))}
+              </Box>
+            )}
+          </Grid>
           {/* تفاصيل المزاد */}
           <Grid item xs={12} md={8}>
             <Paper sx={{ p: 3, mb: 3 }}>
-              <Box sx={{ position: "relative", mb: 3 }}>
+              {/* <Box sx={{ position: "relative", mb: 3 }}>
                 <img
                   src={
                     auction.image_url || "/placeholder.svg?height=400&width=600"
@@ -296,16 +504,39 @@ const AuctionDetailsPage = () => {
                     fontWeight: "bold",
                   }}
                 />
-              </Box>
+              </Box> */}
 
-              <Typography
-                variant="h5"
-                component="h2"
-                gutterBottom
-                fontWeight="bold"
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 2,
+                }}
               >
-                {auction.name}
-              </Typography>
+                <Typography variant="h5" component="h2" fontWeight="bold">
+                  {auction.name}
+                </Typography>
+
+                {/* إضافة أيقونة الإبلاغ عن المزاد */}
+                <Box>
+                  <Tooltip title="مشاركة">
+                    <IconButton color="primary">
+                      <ShareIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="إبلاغ عن المزاد">
+                    <IconButton
+                      color="error"
+                      onClick={() =>
+                        handleOpenReportDialog("auction", auction.bid_id)
+                      }
+                    >
+                      <FlagIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </Box>
 
               <Typography variant="body1" paragraph>
                 {auction.description}
@@ -562,9 +793,32 @@ const AuctionDetailsPage = () => {
             </Card>
 
             <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom fontWeight="bold">
-                معلومات البائع
-              </Typography>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  mb: 2,
+                }}
+              >
+                <Typography variant="h6" fontWeight="bold">
+                  معلومات البائع
+                </Typography>
+
+                {/* إضافة أيقونة الإبلاغ عن البائع */}
+                <Tooltip title="إبلاغ عن البائع">
+                  <IconButton
+                    color="error"
+                    size="small"
+                    onClick={() =>
+                      handleOpenReportDialog("user", auction.seller_id)
+                    }
+                  >
+                    <FlagIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+
               <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                 <Avatar sx={{ mr: 2 }}>
                   <Person />
@@ -680,6 +934,14 @@ const AuctionDetailsPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* نافذة الإبلاغ */}
+      <ReportDialog
+        open={reportDialogOpen}
+        onClose={handleCloseReportDialog}
+        entityType={reportEntityType}
+        entityId={reportEntityId}
+      />
 
       {/* Snackbar للإشعارات */}
       <Snackbar

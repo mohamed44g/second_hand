@@ -124,7 +124,6 @@ function App() {
             <Route path="/messages" element={<MessagesPage />} />
             <Route path="/chat/:id" element={<ChatPage />} />
             <Route path="/cart" element={<CartPage />} />
-            <Route path="/seller/:id" element={<SellerProfilePage />} />
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/auctions" element={<AuctionsPage />} />
             <Route path="/auction/:id" element={<AuctionDetailsPage />} />
@@ -134,6 +133,7 @@ function App() {
               element={<CategoryPage />}
             />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/seller/:id" element={<SellerProfilePage />} />
           </Routes>
           <Footer />
         </Router>
