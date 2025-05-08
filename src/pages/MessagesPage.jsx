@@ -23,21 +23,20 @@ const MessagesPage = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [conversations, setConversations] = useState(chat);
 
-  // useEffect(() => {
-  //   // جلب المحادثات من API
-  //   const getChats = async () => {
-  //     try {
-  //       const response = await fetchUserChats();
-  //       console.log("response", response.data);
-  //       setConversations(response.data);
-  //     } catch (error) {
-  //       console.error("حدث خطأ:", error);
-  //     }
-  //   };
+  useEffect(() => {
+    // جلب المحادثات من API
+    const getChats = async () => {
+      try {
+        const response = await fetchUserChats();
+        console.log("response", response.data);
+        setConversations(response.data);
+      } catch (error) {
+        console.error("حدث خطأ:", error);
+      }
+    };
 
-  //   getChats();
-  // }, []);
-
+    getChats();
+  }, []);
 
   return (
     <Container maxWidth="lg" sx={{ py: 6 }}>

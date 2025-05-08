@@ -31,23 +31,23 @@ import {
   Info as InfoIcon,
   Flag as FlagIcon,
 } from "@mui/icons-material";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { arEG } from "date-fns/locale";
 import { fetchChatMessages } from "../api/chatApi";
 import io from "socket.io-client";
 import { getUserID } from "../utils/checkUser.js";
 import ReportDialog from "../components/ReportDialog";
-import { masseges } from "../data/fakedata.js";
+// import { masseges } from "../data/fakedata.js";
 
 const ChatPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const { id: chatId } = useParams();
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const [message, setMessage] = useState("");
   const [chatData, setChatData] = useState(null);
-  const [messages, setMessages] = useState(masseges);
+  const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
@@ -57,68 +57,67 @@ const ChatPage = () => {
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
 
-  // const currentUserId = getUserID();
-  const currentUserId = 7;
+  const currentUserId = getUserID();
 
   // إعداد اتصال Socket.io
-  // useEffect(() => {
-  //   // إنشاء اتصال Socket.io
-  //   socketRef.current = io("http://localhost:5000"); // استبدل بعنوان الخادم الخاص بك
+  useEffect(() => {
+    // إنشاء اتصال Socket.io
+    socketRef.current = io("http://localhost:5000"); // استبدل بعنوان الخادم الخاص بك
 
-  //   // الانضمام إلى غرفة الدردشة
-  //   if (chatId) {
-  //     socketRef.current.emit("join_chat", chatId);
-  //   }
+    // الانضمام إلى غرفة الدردشة
+    if (chatId) {
+      socketRef.current.emit("join_chat", chatId);
+    }
 
-  //   // استقبال الرسائل الجديدة
-  //   socketRef.current.on("receive_message", (newMessage) => {
-  //     setMessages((prevMessages) => [...prevMessages, newMessage]);
-  //   });
+    // استقبال الرسائل الجديدة
+    socketRef.current.on("receive_message", (newMessage) => {
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+    });
 
-  //   // تنظيف عند إزالة المكون
-  //   return () => {
-  //     if (socketRef.current) {
-  //       socketRef.current.disconnect();
-  //     }
-  //   };
-  // }, [chatId]);
+    // تنظيف عند إزالة المكون
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, [chatId]);
 
   // جلب بيانات المحادثة والرسائل
-  // useEffect(() => {
-  //   const fetchChatData = async () => {
-  //     if (!chatId) return;
+  useEffect(() => {
+    const fetchChatData = async () => {
+      if (!chatId) return;
 
-  //     setLoading(true);
-  //     try {
-  //       const response = await fetchChatMessages(chatId);
-  //       if (response.status === "success") {
-  //         setMessages(response.data || []);
+      setLoading(true);
+      try {
+        const response = await fetchChatMessages(chatId);
+        if (response.status === "success") {
+          setMessages(response.data || []);
 
-  //         // استخراج بيانات المحادثة من أول رسالة
-  //         if (response.data && response.data.length > 0) {
-  //           const firstMessage = response.data[0];
-  //           setChatData({
-  //             chat_id: firstMessage.chat_id,
-  //             user_id_1: firstMessage.sender_id,
-  //             user_id_2:
-  //               currentUserId === firstMessage.sender_id
-  //                 ? firstMessage.receiver_id || 1
-  //                 : firstMessage.sender_id,
-  //             user_1_name: firstMessage.sender_name,
-  //           });
-  //         }
-  //       } else {
-  //         setError("حدث خطأ أثناء جلب الرسائل");
-  //       }
-  //     } catch (err) {
-  //       setError(`حدث خطأ: ${err.message}`);
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
+          // استخراج بيانات المحادثة من أول رسالة
+          if (response.data && response.data.length > 0) {
+            const firstMessage = response.data[0];
+            setChatData({
+              chat_id: firstMessage.chat_id,
+              user_id_1: firstMessage.sender_id,
+              user_id_2:
+                currentUserId === firstMessage.sender_id
+                  ? firstMessage.receiver_id || 1
+                  : firstMessage.sender_id,
+              user_1_name: firstMessage.sender_name,
+            });
+          }
+        } else {
+          setError("حدث خطأ أثناء جلب الرسائل");
+        }
+      } catch (err) {
+        setError(`حدث خطأ: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  //   fetchChatData();
-  // }, [chatId, currentUserId]);
+    fetchChatData();
+  }, [chatId, currentUserId]);
 
   // التمرير إلى آخر رسالة عند تحديث الرسائل
   useEffect(() => {

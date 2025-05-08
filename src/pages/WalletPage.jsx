@@ -65,7 +65,6 @@ const WalletPage = () => {
   } = useQuery({
     queryKey: ["wallet"],
     queryFn: fetchWalletInfo,
-    enabled: false,
   });
 
   // جلب سجل المعاملات
@@ -77,7 +76,6 @@ const WalletPage = () => {
   } = useQuery({
     queryKey: ["walletHistory"],
     queryFn: fetchWalletHistory,
-    enabled: false,
   });
 
   // إيداع مبلغ في المحفظة

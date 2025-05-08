@@ -69,27 +69,27 @@ const ReportsManagement = () => {
   const [error, setError] = useState(null);
 
   // جلب بيانات البلاغات
-  // useEffect(() => {
-  //   const fetchReports = async () => {
-  //     try {
-  //       setIsLoading(true);
-  //       const response = await axiosInstance.get("/reports/admin");
-  //       if (response.data.status === "success") {
-  //         setReports(response.data.data || []);
-  //       } else {
-  //         setError("فشل في جلب بيانات البلاغات");
-  //       }
-  //     } catch (err) {
-  //       setError(
-  //         err.response?.data?.message || "حدث خطأ أثناء جلب بيانات البلاغات"
-  //       );
-  //     } finally {
-  //       setIsLoading(false);
-  //     }
-  //   };
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axiosInstance.get("/reports/admin");
+        if (response.data.status === "success") {
+          setReports(response.data.data || []);
+        } else {
+          setError("فشل في جلب بيانات البلاغات");
+        }
+      } catch (err) {
+        setError(
+          err.response?.data?.message || "حدث خطأ أثناء جلب بيانات البلاغات"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  //   fetchReports();
-  // }, []);
+    fetchReports();
+  }, []);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);

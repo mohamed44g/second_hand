@@ -61,7 +61,7 @@ import { getUserID } from "../utils/checkUser.js"; // تأكد من استيرا
 import ReportDialog from "../components/ReportDialog";
 import axiosInstance from "../api/axiosInstance";
 import { toast } from "react-hot-toast";
-import { bid as auctionData } from "../data/fakedata.js";
+// import { bid } from "../data/fakedata.js";
 
 const AuctionDetailsPage = () => {
   const { id } = useParams();
@@ -83,10 +83,15 @@ const AuctionDetailsPage = () => {
   const [anchorEl, setAnchorEl] = useState(null);
 
   // جلب تفاصيل المزاد
-  const { data, isLoading, isError, error } = useQuery({
+  const {
+    data: auctionData,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ["auction", id],
     queryFn: () => fetchAuctionDetails(id),
-    enabled: !!id && false,
+    enabled: !!id,
   });
 
   // جلب سجل المزايدات
@@ -98,7 +103,7 @@ const AuctionDetailsPage = () => {
   } = useQuery({
     queryKey: ["bidHistory", id],
     queryFn: async () => await fetchBidHistory(id),
-    enabled: !!id && false,
+    enabled: !!id,
   });
 
   // تقديم مزايدة
@@ -170,8 +175,7 @@ const AuctionDetailsPage = () => {
   // استخراج الصور
   const productImages = auctionData?.data?.bid.images?.length
     ? auctionData.data.bid.images.map(
-        // (img) => `${axiosInstance.defaults.baseURL}/${img.image_path}`
-        (img) => `${img.image_path}`
+        (img) => `${axiosInstance.defaults.baseURL}/${img.image_path}`
       )
     : ["/placeholder.svg?height=500&width=500"];
 

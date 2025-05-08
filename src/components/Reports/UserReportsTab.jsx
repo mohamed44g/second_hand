@@ -40,7 +40,6 @@ const UserReportsTab = () => {
   } = useQuery({
     queryKey: ["userReports"],
     queryFn: fetchUserReports,
-    enabled: false,
   });
 
   // إلغاء بلاغ

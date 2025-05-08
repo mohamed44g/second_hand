@@ -27,7 +27,6 @@ const AuctionsPage = () => {
   } = useQuery({
     queryKey: ["auctions"],
     queryFn: fetchAuctions,
-    enabled: false,
   });
 
   // استخراج بيانات المزادات

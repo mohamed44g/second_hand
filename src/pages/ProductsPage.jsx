@@ -51,7 +51,6 @@ const ProductsPage = () => {
       const response = await axiosInstance.get("/products", { params });
       return response.data.data.devices;
     },
-    enabled: false,
   });
 
   // التعامل مع تغيير الفلاتر
@@ -132,9 +131,9 @@ const ProductsPage = () => {
       {/* عرض المنتجات */}
       {isLoading ? (
         <Typography align="center">جاري التحميل...</Typography>
-      ) : devicesData?.length > 0 ? (
+      ) : data?.length > 0 ? (
         <Grid container spacing={3}>
-          {devicesData?.map((device) => (
+          {data?.map((device) => (
             <Grid item xs={12} sm={6} md={3} key={device.device_id}>
               <ProductCard device={device} isMyProductsPage={false} />
             </Grid>

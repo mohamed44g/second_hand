@@ -62,7 +62,6 @@ const ProfilePage = () => {
   } = useQuery({
     queryKey: ["userData"],
     queryFn: fetchUserData,
-    enabled: false,
   });
 
   const userData = userResponse?.data || user;

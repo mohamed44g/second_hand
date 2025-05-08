@@ -129,12 +129,7 @@ const ProductCardComponent = ({
         }}
       >
         <ProductImage
-          image={
-            // device.image_url
-            //   ? `${axiosInstance.defaults.baseURL}/${device.image_url}`
-            //   : "/placeholder.svg?height=200&width=200"
-            device.image_url
-          }
+          image={`${axiosInstance.defaults.baseURL}/${device.image_url}`}
           title={device.name}
         />
         {device.is_auction && (

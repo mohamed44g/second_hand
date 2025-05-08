@@ -66,7 +66,6 @@ const MyProductsPage = () => {
   } = useQuery({
     queryKey: ["userProducts"],
     queryFn: fetchUserProducts,
-    enabled: false,
   });
 
   // حذف منتج

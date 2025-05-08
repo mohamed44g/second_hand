@@ -52,27 +52,27 @@ const UsersManagement = () => {
   const [error, setError] = useState(null);
 
   // // جلب بيانات المستخدمين
-  // useEffect(() => {
-  //   const fetchUsers = async () => {
-  //     try {
-  //       setIsLoading(true);
-  //       const response = await axiosInstance.get("/admin/users");
-  //       if (response.data.status === "success") {
-  //         setUsers(response.data.data);
-  //       } else {
-  //         setError("فشل في جلب بيانات المستخدمين");
-  //       }
-  //     } catch (err) {
-  //       setError(
-  //         err.response?.data?.message || "حدث خطأ أثناء جلب بيانات المستخدمين"
-  //       );
-  //     } finally {
-  //       setIsLoading(false);
-  //     }
-  //   };
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axiosInstance.get("/admin/users");
+        if (response.data.status === "success") {
+          setUsers(response.data.data);
+        } else {
+          setError("فشل في جلب بيانات المستخدمين");
+        }
+      } catch (err) {
+        setError(
+          err.response?.data?.message || "حدث خطأ أثناء جلب بيانات المستخدمين"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  //   fetchUsers();
-  // }, []);
+    fetchUsers();
+  }, []);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);

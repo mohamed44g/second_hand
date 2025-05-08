@@ -78,7 +78,7 @@ const ProductPage = () => {
   } = useQuery({
     queryKey: ["product", id],
     queryFn: () => fetchProduct(id),
-    enabled: !!id && false, // تفعيل الاستعلام فقط عندما يكون هناك معرف للمنتج
+    enabled: !!id, // تفعيل الاستعلام فقط عندما يكون هناك معرف للمنتج
   });
 
   // إضافة المنتج إلى عربة التسوق
