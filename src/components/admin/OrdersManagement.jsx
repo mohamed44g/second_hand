@@ -19,6 +19,11 @@ import {
   Snackbar,
   Chip,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -54,6 +59,8 @@ const OrdersManagement = () => {
   });
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+  const [newStatus, setNewStatus] = useState(null);
 
   // استخدام البيانات الحقيقية
   const [orders, setOrders] = useState([]);
@@ -110,51 +117,63 @@ const OrdersManagement = () => {
     setAnchorEl(null);
   };
 
-  const handleStatusChange = async (newStatus) => {
-    if (selectedOrder) {
-      try {
-        setIsLoading(true);
-        const response = await axiosInstance.patch(
-          `/admin/orders/${selectedOrder.order_id}`,
-          {
-            status: newStatus,
-          }
+  const handleOpenConfirmDialog = (order, status) => {
+    setSelectedOrder(order);
+    setNewStatus(status);
+    setOpenConfirmDialog(true);
+  };
+
+  const handleCloseConfirmDialog = () => {
+    setOpenConfirmDialog(false);
+    setSelectedOrder(null);
+    setNewStatus(null);
+  };
+
+  const handleStatusChange = async () => {
+    if (!selectedOrder || !newStatus) return;
+
+    try {
+      setIsLoading(true);
+      const response = await axiosInstance.patch(
+        `/admin/orders/${selectedOrder.order_id}`,
+        {
+          status: newStatus,
+        }
+      );
+
+      if (response.data.status === "success") {
+        // تحديث حالة الطلب في القائمة
+        setOrders(
+          orders.map((order) => {
+            if (order.order_id === selectedOrder.order_id) {
+              return { ...order, status: newStatus };
+            }
+            return order;
+          })
         );
 
-        if (response.data.status === "success") {
-          // تحديث حالة الطلب في القائمة
-          setOrders(
-            orders.map((order) => {
-              if (order.order_id === selectedOrder.order_id) {
-                return { ...order, status: newStatus };
-              }
-              return order;
-            })
-          );
-
-          setSnackbar({
-            open: true,
-            message: `تم تحديث حالة الطلب إلى "${statusTranslations[newStatus]}" بنجاح`,
-            severity: "success",
-          });
-        } else {
-          setSnackbar({
-            open: true,
-            message: "فشل في تحديث حالة الطلب",
-            severity: "error",
-          });
-        }
-      } catch (err) {
         setSnackbar({
           open: true,
-          message:
-            err.response?.data?.message || "حدث خطأ أثناء تحديث حالة الطلب",
+          message: `تم تحديث حالة الطلب إلى "${statusTranslations[newStatus]}" بنجاح`,
+          severity: "success",
+        });
+      } else {
+        setSnackbar({
+          open: true,
+          message: "فشل في تحديث حالة الطلب",
           severity: "error",
         });
-      } finally {
-        setIsLoading(false);
-        handleMenuClose();
       }
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message:
+          err.response?.data?.message || "حدث خطأ أثناء تحديث حالة الطلب",
+        severity: "error",
+      });
+    } finally {
+      setIsLoading(false);
+      handleCloseConfirmDialog();
     }
   };
 
@@ -260,27 +279,53 @@ const OrdersManagement = () => {
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: "flex", gap: 1 }}>
-                          {order.status !== "shipped" && (
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              startIcon={<ShippingIcon />}
-                              onClick={() => handleStatusChange("shipped")}
-                              color="info"
-                            >
-                              تم الشحن
-                            </Button>
-                          )}
-                          {order.status !== "delivered" && (
+                          {order.status === "delivered" ? (
                             <Button
                               variant="outlined"
                               size="small"
                               startIcon={<CheckCircleIcon />}
-                              onClick={() => handleStatusChange("delivered")}
+                              color="success"
+                              disabled
+                            >
+                              تم التسليم
+                            </Button>
+                          ) : order.status === "shipped" ? (
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              startIcon={<CheckCircleIcon />}
+                              onClick={() =>
+                                handleOpenConfirmDialog(order, "delivered")
+                              }
                               color="success"
                             >
                               تم التسليم
                             </Button>
+                          ) : (
+                            <>
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                startIcon={<ShippingIcon />}
+                                onClick={() =>
+                                  handleOpenConfirmDialog(order, "shipped")
+                                }
+                                color="info"
+                              >
+                                تم الشحن
+                              </Button>
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                startIcon={<CheckCircleIcon />}
+                                onClick={() =>
+                                  handleOpenConfirmDialog(order, "delivered")
+                                }
+                                color="success"
+                              >
+                                تم التسليم
+                              </Button>
+                            </>
                           )}
                         </Box>
                       </TableCell>
@@ -304,6 +349,35 @@ const OrdersManagement = () => {
           />
         </Paper>
       )}
+
+      {/* Modal لتأكيد تغيير الحالة */}
+      <Dialog open={openConfirmDialog} onClose={handleCloseConfirmDialog}>
+        <DialogTitle>تأكيد تغيير حالة الطلب</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            هل أنت متأكد من تغيير الحالة إلى {statusTranslations[newStatus]}؟
+            هذا الإجراء لا يمكن التراجع عنه.
+            {newStatus === "delivered" && (
+              <Typography variant="body1" color="text.secondary" mt={2}>
+                * سيتم تحويل مبلغ الشراء الى البائع بعد تأكيد التسليم.
+              </Typography>
+            )}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseConfirmDialog} color="primary">
+            إلغاء
+          </Button>
+          <Button
+            onClick={handleStatusChange}
+            color="primary"
+            variant="contained"
+            disabled={isLoading}
+          >
+            {isLoading ? <CircularProgress size={24} /> : "تأكيد"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Snackbar للإشعارات */}
       <Snackbar

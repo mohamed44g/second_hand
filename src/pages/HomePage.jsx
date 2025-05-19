@@ -1,6 +1,5 @@
 "use client";
-
-import React from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Box,
   Container,
@@ -15,6 +14,8 @@ import {
   IconButton,
   Paper,
   Rating,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import {
@@ -27,10 +28,18 @@ import {
   Headphones,
   Camera,
   Watch,
+  People,
+  Inventory2,
+  Store,
+  LocalShipping,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
-import img1 from "../assets/images/pic2.png";
-import img2 from "../assets/images/pic1.png";
+import { useQuery } from "@tanstack/react-query";
+import { fetchLatestProducts, fetchCategories } from "../api/productApi";
+import { fetchLatestAuctions } from "../api/auctionApi";
+import sellIcon from "../assets/images/sellIcon.png";
+import ProdectCard from "../components/ProductCard";
+import banner from "../assets/images/baner.jpg";
 
 // Styled components
 const HeroSection = styled(Box)(({ theme }) => ({
@@ -38,8 +47,8 @@ const HeroSection = styled(Box)(({ theme }) => ({
     "linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url(src/assets/images/steptodown.com752128.jpg)",
   backgroundSize: "cover",
   backgroundPosition: "center",
+  height: "90vh",
   color: "white",
-  height: "100vh",
   padding: theme.spacing(12, 0),
   textAlign: "center",
   position: "relative",
@@ -68,182 +77,168 @@ const ProductCard = styled(Card)(({ theme }) => ({
   },
 }));
 
-const ProductImageContainer = styled(Box)(() => ({
-  background: "linear-gradient(to right, #111, #333)",
-  width: "100%", // أو أي عرض مناسب
-  height: "auto", // أو ارتفاع مناسب، ممكن يعتمد على CardMedia اللي جواه
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
+const ProductImage = styled(CardMedia)(({ theme }) => ({
+  paddingTop: "100%", // 1:1 aspect ratio
+  backgroundColor: "#000",
 }));
 
-const ProductImage = styled(CardMedia)(() => ({
-  paddingTop: "100%", // للحفاظ على نسبة العرض إلى الارتفاع 1:1
-  backgroundSize: "contain", // لعرض الصورة بالكامل
-  backgroundPosition: "center",
-  backgroundRepeat: "no-repeat",
-  height: 300,
-  width: 300,
-}));
+// Component for animated counter that only animates once
+const AnimatedCounter = ({ end, duration = 2000 }) => {
+  const [count, setCount] = useState(0);
+  const countRef = useRef(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const hasAnimated = useRef(false); // Track if animation has already run
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && !hasAnimated.current) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentRef = countRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible || hasAnimated.current) return;
+
+    let startTime;
+    let animationFrameId;
+
+    const startCount = 0;
+    const step = (timestamp) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      const currentCount = Math.floor(
+        progress * (end - startCount) + startCount
+      );
+
+      setCount(currentCount);
+
+      if (progress < 1) {
+        animationFrameId = window.requestAnimationFrame(step);
+      } else {
+        // Animation completed
+        hasAnimated.current = true;
+      }
+    };
+
+    animationFrameId = window.requestAnimationFrame(step);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+    };
+  }, [end, duration, isVisible]);
+
+  return <span ref={countRef}>{count.toLocaleString()}</span>;
+};
 
 const HomePage = () => {
-  // Sample product data
-  const featuredProducts = [
-    {
-      id: 1,
-      name: "آيفون 13 برو ماكس",
-      image: img2,
-      price: 15000,
-      oldPrice: 18000,
-      rating: 4.5,
-      isAuction: false,
-      category: "هواتف",
-      condition: "ممتاز",
-    },
-    {
-      id: 2,
-      name: "سامسونج جالاكسي S21",
-      image: img1,
-      price: 10000,
-      oldPrice: 12000,
-      rating: 4.2,
-      isAuction: true,
-      auctionEndsIn: "2 ساعة",
-      category: "هواتف",
-      condition: "جيد جداً",
-    },
-    {
-      id: 3,
-      name: "ماك بوك برو 2021",
-      image: img2,
-      price: 25000,
-      oldPrice: 30000,
-      rating: 4.8,
-      isAuction: false,
-      category: "لابتوب",
-      condition: "ممتاز",
-    },
-    {
-      id: 4,
-      name: "سماعات آبل إيربودز برو",
-      image: img1,
-      price: 3500,
-      oldPrice: 4500,
-      rating: 4.6,
-      isAuction: false,
-      category: "سماعات",
-      condition: "جديد تقريباً",
-    },
-  ];
+  // استخدام React Query لجلب أحدث المنتجات
+  const {
+    data: latestProductsData,
+    isLoading: isLoadingProducts,
+    isError: isErrorProducts,
+    error: productsError,
+  } = useQuery({
+    queryKey: ["latestProducts"],
+    queryFn: fetchLatestProducts,
+  });
 
-  const auctionProducts = [
-    {
-      id: 5,
-      name: "آيباد برو 2022",
-      image: img1,
-      currentBid: 8000,
-      nextMinBid: 8200,
-      bids: 15,
-      endsIn: "5 ساعات",
-      category: "تابلت",
-      condition: "ممتاز",
-    },
-    {
-      id: 6,
-      name: "سوني بلاي ستيشن 5",
-      image: img2,
-      currentBid: 12000,
-      nextMinBid: 12200,
-      bids: 23,
-      endsIn: "2 يوم",
-      category: "ألعاب",
-      condition: "جيد",
-    },
-    {
-      id: 7,
-      name: "كاميرا كانون EOS R5",
-      image: img1,
-      currentBid: 20000,
-      nextMinBid: 20500,
-      bids: 8,
-      endsIn: "12 ساعة",
-      category: "كاميرات",
-      condition: "ممتاز",
-    },
-    {
-      id: 8,
-      name: "ساعة آبل الإصدار 7",
-      image: img2,
-      currentBid: 4500,
-      nextMinBid: 4600,
-      bids: 10,
-      endsIn: "1 يوم",
-      category: "ساعات ذكية",
-      condition: "جيد جداً",
-    },
-  ];
+  const {
+    data: latestAuctionsData,
+    isLoading: isLoadingAuctions,
+    isError: isErrorAuctions,
+    error: auctionsError,
+  } = useQuery({
+    queryKey: ["latestAuctions"],
+    queryFn: fetchLatestAuctions,
+  });
 
-  const categories = [
-    { name: "هواتف محمولة", icon: <Smartphone fontSize="large" /> },
-    { name: "لابتوب", icon: <Laptop fontSize="large" /> },
-    { name: "سماعات", icon: <Headphones fontSize="large" /> },
-    { name: "كاميرات", icon: <Camera fontSize="large" /> },
-    { name: "ساعات ذكية", icon: <Watch fontSize="large" /> },
-  ];
+  // استخدام React Query لجلب الفئات
+  const {
+    data: categoriesData,
+    isLoading: isLoadingCategories,
+    isError: isErrorCategories,
+    error: categoriesError,
+  } = useQuery({
+    queryKey: ["categories"],
+    queryFn: fetchCategories,
+  });
+
+  // استخراج البيانات من الاستجابات
+  const latestProducts = latestProductsData?.data || [];
+  const latestAuctions = latestAuctionsData?.data || [];
 
   return (
     <Box>
       {/* Hero Section */}
       <HeroSection>
-        <Container>
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              height: "70vh",
-              alignItems: "center",
-            }}
+        <Container
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            height: "70vh",
+          }}
+        >
+          <Typography
+            variant="h3"
+            component="h1"
+            gutterBottom
+            fontWeight="bold"
           >
-            <Typography
-              variant="h3"
-              component="h1"
-              gutterBottom
-              fontWeight="bold"
+            أجهزة إلكترونية مستعملة بأفضل الأسعار
+          </Typography>
+          <Typography
+            variant="h5"
+            component="h2"
+            gutterBottom
+            sx={{ mb: 4, maxWidth: 700, mx: "auto" }}
+          >
+            اشتري وبيع الأجهزة الإلكترونية المستعملة بكل سهولة وأمان
+          </Typography>
+          <Box sx={{ mt: 4 }}>
+            <Button
+              variant="outlined"
+              color="primary"
+              size="large"
+              sx={{
+                mx: 1,
+                px: 4,
+                py: 1.5,
+                bgcolor: "rgba(255,255,255,0.1)",
+                borderColor: "white",
+                color: "white",
+                "&:hover": {
+                  bgcolor: "rgba(255,255,255,0.2)",
+                  borderColor: "white",
+                },
+              }}
+              component={Link}
+              to="/products"
             >
-              أجهزة إلكترونية مستعملة بأفضل الأسعار
-            </Typography>
-            <Typography
-              variant="h5"
-              component="h2"
-              gutterBottom
-              sx={{ mb: 4, maxWidth: 700, mx: "auto" }}
-            >
-              اشتري وبيع الأجهزة الإلكترونية المستعملة بكل سهولة وأمان
-            </Typography>
-            <Box sx={{ mt: 4 }}>
-              <Button
-                variant="contained"
-                size="large"
-                sx={{
-                  mx: 1,
-                  px: 4,
-                  py: 1.5,
-                  borderRadius: 3,
-                  backgroundColor: "#333",
-                }}
-                component={Link}
-                to="/products"
-              >
-                تصفح المنتجات
-              </Button>
-            </Box>
+              تصفح المنتجات
+            </Button>
           </Box>
         </Container>
       </HeroSection>
 
-      {/* Categories Section */}
-      <Container sx={{ mt: 8, mb: 6 }}>
+      {/* Categories Showcase Section */}
+      <Container sx={{ mt: 13, mb: 18 }}>
         <Typography
           variant="h4"
           component="h2"
@@ -251,38 +246,345 @@ const HomePage = () => {
           gutterBottom
           fontWeight="bold"
         >
-          فئات المنتجات
+          تصفح حسب الفئة
         </Typography>
         <Typography
           variant="body1"
           align="center"
           color="text.secondary"
           paragraph
-          sx={{ mb: 4 }}
+          sx={{ mb: 6 }}
         >
-          تصفح أحدث الأجهزة المستعملة حسب الفئة
+          اكتشف مجموعة متنوعة من الأجهزة الإلكترونية المستعملة حسب الفئة
         </Typography>
 
-        <Grid container spacing={3} justifyContent="center">
-          {categories.map((category, index) => (
-            <Grid item xs={6} sm={4} md={2.4} key={index}>
-              <CategoryCard elevation={2}>
-                <Box sx={{ color: "primary.main", mb: 1 }}>{category.icon}</Box>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={4}>
+            <Card
+              sx={{ height: "100%", position: "relative", overflow: "hidden" }}
+            >
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  bgcolor: "rgba(0,0,0,0.5)",
+                  zIndex: 1,
+                }}
+              />
+              <CardMedia
+                component="img"
+                height="250"
+                image="../src/assets/images/phones.jpg"
+                alt="هواتف ذكية"
+              />
+              <Box
+                sx={{
+                  position: "absolute",
+                  bottom: 0,
+                  left: 0,
+                  width: "100%",
+                  p: 3,
+                  zIndex: 2,
+                  color: "white",
+                }}
+              >
                 <Typography
-                  variant="subtitle1"
+                  variant="h5"
                   component="h3"
-                  fontWeight="medium"
+                  gutterBottom
+                  fontWeight="bold"
                 >
-                  {category.name}
+                  هواتف ذكية
                 </Typography>
-              </CategoryCard>
-            </Grid>
-          ))}
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  أحدث الهواتف المستعملة بأفضل الأسعار
+                </Typography>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  component={Link}
+                  to="/category/6"
+                  sx={{ borderColor: "white", color: "white" }}
+                >
+                  تصفح الهواتف
+                </Button>
+              </Box>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Card
+              sx={{ height: "100%", position: "relative", overflow: "hidden" }}
+            >
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  bgcolor: "rgba(0,0,0,0.5)",
+                  zIndex: 1,
+                }}
+              />
+              <CardMedia
+                component="img"
+                height="250"
+                image="../src/assets/images/labtops.jpg"
+                alt="لابتوب"
+              />
+              <Box
+                sx={{
+                  position: "absolute",
+                  bottom: 0,
+                  left: 0,
+                  width: "100%",
+                  p: 3,
+                  zIndex: 2,
+                  color: "white",
+                }}
+              >
+                <Typography
+                  variant="h5"
+                  component="h3"
+                  gutterBottom
+                  fontWeight="bold"
+                >
+                  لابتوب
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  لابتوب مستعمل بحالة ممتازة وأسعار تنافسية
+                </Typography>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  component={Link}
+                  to="/category/7"
+                  sx={{ borderColor: "white", color: "white" }}
+                >
+                  تصفح اللابتوب
+                </Button>
+              </Box>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Card
+              sx={{ height: "100%", position: "relative", overflow: "hidden" }}
+            >
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  bgcolor: "rgba(0,0,0,0.5)",
+                  zIndex: 1,
+                }}
+              />
+              <CardMedia
+                component="img"
+                height="250"
+                image="../src/assets/images/accessories.jpg"
+                alt="اكسسوارات"
+              />
+              <Box
+                sx={{
+                  position: "absolute",
+                  bottom: 0,
+                  left: 0,
+                  width: "100%",
+                  p: 3,
+                  zIndex: 2,
+                  color: "white",
+                }}
+              >
+                <Typography
+                  variant="h5"
+                  component="h3"
+                  gutterBottom
+                  fontWeight="bold"
+                >
+                  اكسسوارات
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  سماعات وشواحن وملحقات بأسعار مخفضة
+                </Typography>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  component={Link}
+                  to="/category/8"
+                  sx={{ borderColor: "white", color: "white" }}
+                >
+                  تصفح الاكسسوارات
+                </Button>
+              </Box>
+            </Card>
+          </Grid>
         </Grid>
       </Container>
 
+      {/* Statistics Section */}
+      <Box
+        sx={{ py: 8, bgcolor: "primary.main", color: "white", mt: 5, mb: 10 }}
+      >
+        <Container>
+          <Typography
+            variant="h4"
+            component="h2"
+            align="center"
+            gutterBottom
+            fontWeight="bold"
+          >
+            إحصائيات الموقع
+          </Typography>
+          <Typography
+            variant="body1"
+            align="center"
+            paragraph
+            sx={{ mb: 6, maxWidth: 700, mx: "auto", opacity: 0.9 }}
+          >
+            نفخر بثقة عملائنا وتنامي مجتمعنا من البائعين والمشترين
+          </Typography>
+
+          <Grid container spacing={4} justifyContent="center">
+            <Grid item xs={6} md={3}>
+              <Box sx={{ textAlign: "center", p: 2 }}>
+                <Box
+                  sx={{
+                    width: 70,
+                    height: 70,
+                    borderRadius: "50%",
+                    bgcolor: "rgba(255,255,255,0.2)",
+                    color: "white",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    mx: "auto",
+                    mb: 2,
+                  }}
+                >
+                  <People fontSize="large" />
+                </Box>
+                <Typography
+                  variant="h3"
+                  component="div"
+                  gutterBottom
+                  fontWeight="bold"
+                  sx={{ mb: 0 }}
+                >
+                  +<AnimatedCounter end={15000} />
+                </Typography>
+                <Typography variant="h6" component="div" sx={{ opacity: 0.9 }}>
+                  مستخدم نشط
+                </Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <Box sx={{ textAlign: "center", p: 2 }}>
+                <Box
+                  sx={{
+                    width: 70,
+                    height: 70,
+                    borderRadius: "50%",
+                    bgcolor: "rgba(255,255,255,0.2)",
+                    color: "white",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    mx: "auto",
+                    mb: 2,
+                  }}
+                >
+                  <Inventory2 fontSize="large" />
+                </Box>
+                <Typography
+                  variant="h3"
+                  component="div"
+                  gutterBottom
+                  fontWeight="bold"
+                  sx={{ mb: 0 }}
+                >
+                  +<AnimatedCounter end={8500} />
+                </Typography>
+                <Typography variant="h6" component="div" sx={{ opacity: 0.9 }}>
+                  منتج متاح
+                </Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <Box sx={{ textAlign: "center", p: 2 }}>
+                <Box
+                  sx={{
+                    width: 70,
+                    height: 70,
+                    borderRadius: "50%",
+                    bgcolor: "rgba(255,255,255,0.2)",
+                    color: "white",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    mx: "auto",
+                    mb: 2,
+                  }}
+                >
+                  <Store fontSize="large" />
+                </Box>
+                <Typography
+                  variant="h3"
+                  component="div"
+                  gutterBottom
+                  fontWeight="bold"
+                  sx={{ mb: 0 }}
+                >
+                  +<AnimatedCounter end={1200} />
+                </Typography>
+                <Typography variant="h6" component="div" sx={{ opacity: 0.9 }}>
+                  تاجر موثوق
+                </Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <Box sx={{ textAlign: "center", p: 2 }}>
+                <Box
+                  sx={{
+                    width: 70,
+                    height: 70,
+                    borderRadius: "50%",
+                    bgcolor: "rgba(255,255,255,0.2)",
+                    color: "white",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    mx: "auto",
+                    mb: 2,
+                  }}
+                >
+                  <LocalShipping fontSize="large" />
+                </Box>
+                <Typography
+                  variant="h3"
+                  component="div"
+                  gutterBottom
+                  fontWeight="bold"
+                  sx={{ mb: 0 }}
+                >
+                  +<AnimatedCounter end={25000} />
+                </Typography>
+                <Typography variant="h6" component="div" sx={{ opacity: 0.9 }}>
+                  طلب مكتمل
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
       {/* Featured Products Section */}
-      <Box sx={{ bgcolor: "background.default", py: 6, mt: 15 }}>
+      <Box sx={{ bgcolor: "background.default", py: 6, mb: 10, mt: 10 }}>
         <Container>
           <Box
             sx={{
@@ -305,107 +607,37 @@ const HomePage = () => {
             </Button>
           </Box>
 
-          <Grid container spacing={3}>
-            {featuredProducts.map((product) => (
-              <Grid item xs={12} sm={6} md={3} key={product.id}>
-                <ProductCard>
-                  <ProductImageContainer>
-                    <ProductImage image={product.image} title={product.name} />
-                  </ProductImageContainer>
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        mb: 1,
-                      }}
-                    >
-                      <Chip
-                        label={product.category}
-                        size="small"
-                        sx={{ bgcolor: "rgba(0,0,0,0.05)" }}
-                      />
-                      <Chip
-                        label={product.condition}
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      />
-                    </Box>
-                    <Typography variant="h6" component="h3" gutterBottom>
-                      {product.name}
-                    </Typography>
-                    <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                      <Rating
-                        value={product.rating}
-                        precision={0.5}
-                        size="small"
-                        readOnly
-                      />
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ ml: 1 }}
-                      >
-                        ({product.rating})
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <Typography
-                        variant="h6"
-                        component="span"
-                        color="primary.main"
-                        fontWeight="bold"
-                      >
-                        {product.price} ج.م
-                      </Typography>
-                      {product.oldPrice && (
-                        <Typography
-                          variant="body2"
-                          component="span"
-                          color="text.secondary"
-                          sx={{ ml: 1, textDecoration: "line-through" }}
-                        >
-                          {product.oldPrice} ج.م
-                        </Typography>
-                      )}
-                    </Box>
-                    {product.isAuction && (
-                      <Box sx={{ mt: 1 }}>
-                        <Chip
-                          icon={<Gavel fontSize="small" />}
-                          label={`ينتهي في ${product.auctionEndsIn}`}
-                          size="small"
-                          color="secondary"
-                        />
-                      </Box>
-                    )}
-                  </CardContent>
-                  <CardActions
-                    sx={{ justifyContent: "space-between", px: 2, pb: 2 }}
-                  >
-                    <Button
-                      variant="contained"
-                      size="small"
-                      startIcon={<ShoppingCart />}
-                      component={Link}
-                      to={`/product/${product.id}`}
-                    >
-                      عرض المنتج
-                    </Button>
-                    <IconButton aria-label="add to favorites" size="small">
-                      <FavoriteBorder />
-                    </IconButton>
-                  </CardActions>
-                </ProductCard>
-              </Grid>
-            ))}
-          </Grid>
+          {isLoadingProducts ? (
+            <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : isErrorProducts ? (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              حدث خطأ أثناء تحميل المنتجات:{" "}
+              {productsError?.message || "خطأ غير معروف"}
+            </Alert>
+          ) : latestProducts.length === 0 ? (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              لا توجد منتجات متاحة حالياً
+            </Alert>
+          ) : (
+            <Grid container spacing={3}>
+              {latestProducts.slice(0, 4).map((product) => (
+                <Grid item xs={12} sm={6} md={3} key={product.device_id}>
+                  <ProdectCard
+                    device={product}
+                    isMyProductsPage={false}
+                    isAuctionsPage={false}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          )}
         </Container>
       </Box>
 
       {/* Auctions Section */}
-      <Container sx={{ mt: 15, mb: 6 }}>
+      <Container sx={{ mb: 10, mt: 10 }}>
         <Box
           sx={{
             display: "flex",
@@ -427,130 +659,36 @@ const HomePage = () => {
           </Button>
         </Box>
 
-        <Grid container spacing={3}>
-          {auctionProducts.map((product) => (
-            <Grid item xs={12} sm={6} md={3} key={product.id}>
-              <ProductCard>
-                <Box sx={{ position: "relative" }}>
-                  <ProductImageContainer>
-                    <ProductImage image={product.image} title={product.name} />
-                  </ProductImageContainer>
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      top: 10,
-                      right: 10,
-                      bgcolor: "primary.main",
-                      color: "white",
-                      px: 1.5,
-                      py: 0.5,
-                      borderRadius: 1,
-                      fontSize: "0.75rem",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    مزاد
-                  </Box>
-                </Box>
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      mb: 1,
-                    }}
-                  >
-                    <Chip
-                      label={product.category}
-                      size="small"
-                      sx={{ bgcolor: "rgba(0,0,0,0.05)" }}
-                    />
-                    <Chip
-                      label={product.condition}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                  </Box>
-                  <Typography variant="h6" component="h3" gutterBottom>
-                    {product.name}
-                  </Typography>
-                  <Box sx={{ mb: 1 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      المزايدة الحالية:
-                    </Typography>
-                    <Typography
-                      variant="h6"
-                      component="span"
-                      color="primary.main"
-                      fontWeight="bold"
-                    >
-                      {product.currentBid} ج.م
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      mb: 1,
-                    }}
-                  >
-                    <Typography variant="body2" color="text.secondary">
-                      الحد الأدنى للمزايدة التالية:
-                    </Typography>
-                    <Typography variant="body2" fontWeight="medium">
-                      {product.nextMinBid} ج.م
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Typography variant="body2" color="text.secondary">
-                      عدد المزايدات:
-                    </Typography>
-                    <Typography variant="body2" fontWeight="medium">
-                      {product.bids}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ mt: 2 }}>
-                    <Chip
-                      icon={<Gavel fontSize="small" />}
-                      label={`ينتهي في ${product.endsIn}`}
-                      size="small"
-                      color="secondary"
-                      sx={{ width: "100%", justifyContent: "flex-start" }}
-                    />
-                  </Box>
-                </CardContent>
-                <CardActions
-                  sx={{ justifyContent: "space-between", px: 2, pb: 2 }}
-                >
-                  <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<Gavel />}
-                    component={Link}
-                    to={`/auction/${product.id}`}
-                  >
-                    المزايدة الآن
-                  </Button>
-                  <IconButton aria-label="add to favorites" size="small">
-                    <FavoriteBorder />
-                  </IconButton>
-                </CardActions>
-              </ProductCard>
-            </Grid>
-          ))}
-        </Grid>
+        {isLoadingAuctions ? (
+          <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : isErrorAuctions ? (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            حدث خطأ أثناء تحميل المنتجات:{" "}
+            {productsError?.message || "خطأ غير معروف"}
+          </Alert>
+        ) : latestAuctions.length === 0 ? (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            لا توجد مزادت متاحة حالياً
+          </Alert>
+        ) : (
+          <Grid container spacing={3}>
+            {latestAuctions.slice(0, 4).map((product) => (
+              <Grid item xs={12} sm={6} md={3} key={product.device_id}>
+                <ProdectCard
+                  device={product}
+                  isMyProductsPage={false}
+                  isAuctionsPage={true}
+                />
+              </Grid>
+            ))}
+          </Grid>
+        )}
       </Container>
 
       {/* How It Works Section */}
-      <Box sx={{ bgcolor: "background.default", py: 8, mt: 15 }}>
+      <Box sx={{ bgcolor: "background.default", py: 8, mb: 10, mt: 10 }}>
         <Container>
           <Typography
             variant="h4"
@@ -690,8 +828,24 @@ const HomePage = () => {
         </Container>
       </Box>
 
+      {/* Full Width Banner Image */}
+      <Box sx={{ width: "100%", mt: 4, mb: 4 }}>
+        <img
+          src={banner}
+          alt="dubizzle OPEX"
+          style={{
+            width: { xs: "100%", md: "80%" },
+            objectFit: "cover",
+            maxWidth: "100%",
+            height: { xs: 200, md: 400 },
+            margin: "0 auto",
+            display: "block",
+          }}
+        />
+      </Box>
+
       {/* Testimonials Section */}
-      <Container sx={{ mt: 15 }}>
+      <Container sx={{ mb: 10, mt: 10 }}>
         <Typography
           variant="h4"
           component="h2"
@@ -800,7 +954,13 @@ const HomePage = () => {
                 سعر السوق. نظام المزادات ممتاز والمحفظة الإلكترونية تجعل العملية
                 آمنة وسهلة."
               </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", mt: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  mt: 2,
+                }}
+              >
                 <Box
                   sx={{
                     width: 50,
@@ -833,7 +993,7 @@ const HomePage = () => {
       </Container>
 
       {/* CTA Section */}
-      <Box sx={{ bgcolor: "black", color: "white", py: 10, mt: 15, mb: 15 }}>
+      <Box sx={{ bgcolor: "black", color: "white", py: 8, mb: 15, mt: 15 }}>
         <Container>
           <Grid container spacing={4} alignItems="center">
             <Grid item xs={12} md={7}>
@@ -848,20 +1008,21 @@ const HomePage = () => {
               <Typography variant="h6" paragraph sx={{ mb: 4 }}>
                 قم ببيعها الآن واحصل على أفضل سعر من خلال منصتنا
               </Typography>
-              <Button
+              {/* <Button
                 variant="contained"
                 color="primary"
                 size="large"
-                sx={{ px: 4, py: 1.5, backgroundColor: "#333" }}
+                sx={{ px: 4, py: 1.5 }}
                 component={Link}
+                to="/sell"
               >
                 بيع جهازك الآن
-              </Button>
+              </Button> */}
             </Grid>
             <Grid item xs={12} md={5}>
               <Box
                 component="img"
-                src="src/assets/images/sellIcon.png"
+                src={sellIcon}
                 alt="Sell your device"
                 sx={{
                   width: "100%",

@@ -38,7 +38,6 @@ const RegisterPage = () => {
     national_id: "",
     is_seller: false,
     verificationCode: "",
-    file: null, // File will be stored here
   });
 
   // دالة لتغيير قيم الحقول
@@ -52,20 +51,6 @@ const RegisterPage = () => {
     setFormData({ ...formData, is_seller: e.target.value === "seller" });
   };
 
-  // دالة للتعامل مع رفع الصورة
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setFormData({ ...formData, file: file });
-
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPreviewUrl(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   // useMutation لإرسال طلب توليد كود التحقق
   const generateCodeMutation = useMutation({
@@ -96,9 +81,6 @@ const RegisterPage = () => {
       formDataToSend.append("national_id", data.national_id);
       formDataToSend.append("is_seller", data.is_seller);
       formDataToSend.append("verificationCode", data.verificationCode);
-      if (data.file) {
-        formDataToSend.append("file", data.file); // Append the file
-      }
 
       return axiosInstance.post("/users/register", formDataToSend, {
         headers: {
@@ -127,8 +109,7 @@ const RegisterPage = () => {
       if (
         !formData.first_name ||
         !formData.last_name ||
-        !formData.phone_number ||
-        !formData.file // Require the image file
+        !formData.phone_number
       ) {
         toast.error("يرجى ملء جميع الحقول المطلوبة بما في ذلك الصورة");
         return;
@@ -218,81 +199,6 @@ const RegisterPage = () => {
                   />
                 </RadioGroup>
               </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <Box
-                sx={{
-                  border: "2px dashed",
-                  borderColor: "divider",
-                  borderRadius: 2,
-                  p: 2,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  textAlign: "center",
-                }}
-              >
-                {previewUrl ? (
-                  <Box sx={{ position: "relative", width: "100%" }}>
-                    <img
-                      src={previewUrl || "/placeholder.svg"}
-                      alt="Identity preview"
-                      style={{
-                        width: "100%",
-                        height: "auto",
-                        maxHeight: "200px",
-                        objectFit: "contain",
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Button
-                      variant="contained"
-                      component="label"
-                      startIcon={<PhotoCamera />}
-                      sx={{ mt: 2 }}
-                      size="small"
-                    >
-                      تغيير الصورة
-                      <input
-                        type="file"
-                        hidden
-                        accept="image/*"
-                        onChange={handleFileChange}
-                      />
-                    </Button>
-                  </Box>
-                ) : (
-                  <>
-                    <PhotoCamera
-                      sx={{ fontSize: 40, color: "text.secondary", mb: 1 }}
-                    />
-                    <Typography variant="body1" gutterBottom>
-                      رفع صورة الهوية
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      paragraph
-                    >
-                      يرجى رفع صورة واضحة للهوية الخاصة بك
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      component="label"
-                      startIcon={<PhotoCamera />}
-                    >
-                      اختيار الصورة
-                      <input
-                        type="file"
-                        hidden
-                        accept="image/*"
-                        onChange={handleFileChange}
-                      />
-                    </Button>
-                  </>
-                )}
-              </Box>
             </Grid>
           </Grid>
         );

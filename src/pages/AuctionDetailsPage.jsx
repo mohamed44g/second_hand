@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-
 import { useState, useEffect } from "react";
 import {
   Box,
@@ -54,14 +53,14 @@ import {
   cancelBid,
   finalizeAuction,
   fetchBidHistory,
+  cancelAuction,
 } from "../api/auctionApi";
 import { format, formatDistanceToNow, isAfter } from "date-fns";
 import { arEG } from "date-fns/locale";
-import { getUserID } from "../utils/checkUser.js"; // تأكد من استيراد الدالة الصحيحة
+import { getUserID } from "../utils/checkUser.js";
 import ReportDialog from "../components/ReportDialog";
 import axiosInstance from "../api/axiosInstance";
 import { toast } from "react-hot-toast";
-// import { bid } from "../data/fakedata.js";
 
 const AuctionDetailsPage = () => {
   const { id } = useParams();
@@ -75,6 +74,7 @@ const AuctionDetailsPage = () => {
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   const [isCurrentUserSeller, setIsCurrentUserSeller] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [openCancelAuctionDialog, setOpenCancelAuctionDialog] = useState(false);
 
   // إضافة حالة لنافذة الإبلاغ
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
@@ -106,6 +106,7 @@ const AuctionDetailsPage = () => {
     enabled: !!id,
   });
 
+
   // تقديم مزايدة
   const placeBidMutation = useMutation({
     mutationFn: (bidData) => placeBid(bidData),
@@ -130,6 +131,22 @@ const AuctionDetailsPage = () => {
       queryClient.invalidateQueries({ queryKey: ["bidHistory", id] });
       handleCloseCancelDialog();
       toast.success("تم إلغاء المزايدة بنجاح");
+    },
+    onError: (error) => {
+      if (error.response?.status === 400) {
+        toast.error(error.response.data.message);
+      }
+    },
+  });
+
+  // إلغاء المزاد
+  const cancelAuctionMutation = useMutation({
+    mutationFn: (bidId) => cancelAuction(bidId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["auction", id] });
+      queryClient.invalidateQueries({ queryKey: ["bidHistory", id] });
+      handleCloseCancelAuctionDialog();
+      toast.success("تم إلغاء المزاد بنجاح");
     },
     onError: (error) => {
       if (error.response?.status === 400) {
@@ -173,8 +190,8 @@ const AuctionDetailsPage = () => {
   }, [auctionData?.data?.bid.seller_id]);
 
   // استخراج الصور
-  const productImages = auctionData?.data?.bid.images?.length
-    ? auctionData.data.bid.images.map(
+  const productImages = auctionData?.data?.images?.length
+    ? auctionData.data.images.map(
         (img) => `${axiosInstance.defaults.baseURL}/${img.image_path}`
       )
     : ["/placeholder.svg?height=500&width=500"];
@@ -193,6 +210,14 @@ const AuctionDetailsPage = () => {
 
   const handleCloseCancelDialog = () => {
     setOpenCancelDialog(false);
+  };
+
+  const handleOpenCancelAuctionDialog = () => {
+    setOpenCancelAuctionDialog(true);
+  };
+
+  const handleCloseCancelAuctionDialog = () => {
+    setOpenCancelAuctionDialog(false);
   };
 
   const handleOpenFinalizeDialog = () => {
@@ -217,6 +242,11 @@ const AuctionDetailsPage = () => {
   const handleCancelBid = () => {
     if (!auction) return;
     cancelBidMutation.mutate(auction.bid_id);
+  };
+
+  const handleCancelAuction = () => {
+    if (!auction) return;
+    cancelAuctionMutation.mutate(auction.bid_id);
   };
 
   const handleFinalizeAuction = () => {
@@ -294,9 +324,7 @@ const AuctionDetailsPage = () => {
 
   // التحقق مما إذا كان المستخدم الحالي قد قدم مزايدة
   const hasCurrentUserBid = () => {
-    // هنا يجب التحقق مما إذا كان المستخدم الحالي قد قدم مزايدة
-    // للتبسيط، سنفترض أن المستخدم الحالي قد قدم مزايدة إذا كان معرف المزايد هو 3
-    return auction?.bidder_username === "ahmed123";
+    return bidHistory.some((bid) => bid.user_id === getUserID());
   };
 
   // حساب الحد الأدنى للمزايدة التالية
@@ -304,6 +332,11 @@ const AuctionDetailsPage = () => {
     if (!auction) return 0;
     return Number(auction.current_price) + Number(auction.minimum_increment);
   };
+
+  // تحديد ما إذا كان المستخدم الحالي هو الفائز
+  const currentUserId = getUserID();
+  const isWinner =
+    auction?.winning_bid_id && auction.winning_bid_id === currentUserId;
 
   return (
     <Container maxWidth="lg" sx={{ py: 6 }}>
@@ -443,18 +476,6 @@ const AuctionDetailsPage = () => {
                   </ListItemIcon>
                   <ListItemText primary="الإبلاغ عن هذا المنتج" />
                 </MenuItem>
-                <MenuItem
-                  onClick={() => {
-                    navigator.clipboard.writeText(window.location.href);
-                    handleCloseMenu();
-                    showSnackbar("تم نسخ الرابط", "success");
-                  }}
-                >
-                  <ListItemIcon>
-                    <ShareIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText primary="مشاركة المنتج" />
-                </MenuItem>
               </Menu>
             </Box>
             {productImages.length > 1 && (
@@ -489,27 +510,13 @@ const AuctionDetailsPage = () => {
           </Grid>
           {/* تفاصيل المزاد */}
           <Grid item xs={12} md={8}>
-            <Paper sx={{ p: 3, mb: 3 }}>
-              {/* <Box sx={{ position: "relative", mb: 3 }}>
-                <img
-                  src={
-                    auction.image_url || "/placeholder.svg?height=400&width=600"
-                  }
-                  alt={auction.name}
-                  style={{ width: "100%", height: "auto", borderRadius: "8px" }}
-                />
-                <Chip
-                  label="مزاد"
-                  color="primary"
-                  sx={{
-                    position: "absolute",
-                    top: 16,
-                    right: 16,
-                    fontWeight: "bold",
-                  }}
-                />
-              </Box> */}
-
+            <Paper
+              sx={{
+                p: 3,
+                mb: 3,
+                borderRadius: 2,
+              }}
+            >
               <Box
                 sx={{
                   display: "flex",
@@ -524,11 +531,6 @@ const AuctionDetailsPage = () => {
 
                 {/* إضافة أيقونة الإبلاغ عن المزاد */}
                 <Box>
-                  <Tooltip title="مشاركة">
-                    <IconButton color="primary">
-                      <ShareIcon />
-                    </IconButton>
-                  </Tooltip>
                   <Tooltip title="إبلاغ عن المزاد">
                     <IconButton
                       color="error"
@@ -630,7 +632,31 @@ const AuctionDetailsPage = () => {
                 <List>
                   {bidHistory.map((bid, index) => (
                     <React.Fragment key={bid.bid_id || index}>
-                      <ListItem>
+                      <ListItem
+                        sx={{
+                          border:
+                            auction?.winning_bid_id === bid?.user_id
+                              ? "3px solid green"
+                              : "none",
+                          borderRadius: 2,
+                          mb: 1,
+                          display: "flex",
+                          alignItems: "center",
+                          position: "relative",
+                        }}
+                      >
+                        {auction?.winning_bid_id === bid?.user_id && (
+                          <Chip
+                            label="فائز"
+                            color="success"
+                            sx={{
+                              position: "absolute",
+                              top: -8,
+                              right: 8,
+                              fontWeight: "bold",
+                            }}
+                          />
+                        )}
                         <ListItemAvatar>
                           <Avatar>
                             <Person />
@@ -644,10 +670,16 @@ const AuctionDetailsPage = () => {
                             { locale: arEG }
                           )}
                         />
+                        {!isAuctionActive(auction.auction_end_time) &&
+                          auction.winning_bid_id === bid.bid_id &&
+                          bid.bidder_id === currentUserId && (
+                            <CheckCircle color="success" sx={{ ml: 2 }} />
+                          )}
                         <Typography
                           variant="subtitle1"
                           color="primary.main"
                           fontWeight="bold"
+                          sx={{ ml: "auto" }}
                         >
                           {bid.bid_amount} ج.م
                         </Typography>
@@ -730,9 +762,26 @@ const AuctionDetailsPage = () => {
                   </Typography>
                 </Box>
 
-                {isAuctionActive(auction.auction_end_time) ? (
+                {auction.bid_status === "cancled" ||
+                auction.bid_status === "ended" ||
+                !isAuctionActive(auction.auction_end_time) ? (
                   <>
-                    {!isCurrentUserSeller && (
+                    {auction.bid_status === "cancled" ? (
+                      <Alert severity="warning">تم الإلغاء</Alert>
+                    ) : auction.bid_status === "ended" ? (
+                      <Alert severity="info">تم الانتهاء</Alert>
+                    ) : (
+                      <Alert severity="info">
+                        انتهى هذا المزاد.{" "}
+                        {auction.winning_bid_id
+                          ? "تم تحديد الفائز."
+                          : "لم يتم تحديد فائز بعد."}
+                      </Alert>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {!isCurrentUserSeller && !hasCurrentUserBid() && (
                       <Button
                         variant="contained"
                         fullWidth
@@ -750,7 +799,7 @@ const AuctionDetailsPage = () => {
                       </Button>
                     )}
 
-                    {hasCurrentUserBid() && (
+                    {!isCurrentUserSeller && hasCurrentUserBid() && (
                       <Button
                         variant="outlined"
                         fullWidth
@@ -758,6 +807,7 @@ const AuctionDetailsPage = () => {
                         startIcon={<Cancel />}
                         onClick={handleOpenCancelDialog}
                         disabled={cancelBidMutation.isPending}
+                        sx={{ mb: 2 }}
                       >
                         {cancelBidMutation.isPending ? (
                           <CircularProgress size={24} color="inherit" />
@@ -768,30 +818,39 @@ const AuctionDetailsPage = () => {
                     )}
 
                     {isCurrentUserSeller && (
-                      <Button
-                        variant="outlined"
-                        fullWidth
-                        color="primary"
-                        startIcon={<CheckCircle />}
-                        onClick={handleOpenFinalizeDialog}
-                        sx={{ mt: 2 }}
-                        disabled={finalizeAuctionMutation.isPending}
-                      >
-                        {finalizeAuctionMutation.isPending ? (
-                          <CircularProgress size={24} color="inherit" />
-                        ) : (
-                          "إنهاء المزاد"
-                        )}
-                      </Button>
+                      <>
+                        <Button
+                          variant="outlined"
+                          fullWidth
+                          color="primary"
+                          startIcon={<CheckCircle />}
+                          onClick={handleOpenFinalizeDialog}
+                          sx={{ mb: 2 }}
+                          disabled={finalizeAuctionMutation.isPending}
+                        >
+                          {finalizeAuctionMutation.isPending ? (
+                            <CircularProgress size={24} color="inherit" />
+                          ) : (
+                            "إنهاء المزاد"
+                          )}
+                        </Button>
+                        <Button
+                          variant="contained"
+                          fullWidth
+                          color="error"
+                          startIcon={<Cancel />}
+                          onClick={handleOpenCancelAuctionDialog}
+                          disabled={cancelAuctionMutation.isPending}
+                        >
+                          {cancelAuctionMutation.isPending ? (
+                            <CircularProgress size={24} color="inherit" />
+                          ) : (
+                            "إلغاء المزاد"
+                          )}
+                        </Button>
+                      </>
                     )}
                   </>
-                ) : (
-                  <Alert severity="info">
-                    انتهى هذا المزاد.{" "}
-                    {auction.winning_bid_id
-                      ? "تم تحديد الفائز."
-                      : "لم يتم تحديد فائز بعد."}
-                  </Alert>
                 )}
               </CardContent>
             </Card>
@@ -911,6 +970,31 @@ const AuctionDetailsPage = () => {
             color="error"
             variant="contained"
             disabled={cancelBidMutation.isPending}
+          >
+            تأكيد الإلغاء
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* نافذة إلغاء المزاد */}
+      <Dialog
+        open={openCancelAuctionDialog}
+        onClose={handleCloseCancelAuctionDialog}
+      >
+        <DialogTitle>إلغاء المزاد</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            هل أنت متأكد من رغبتك في إلغاء المزاد؟ لا يمكن التراجع عن هذا
+            الإجراء.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseCancelAuctionDialog}>تراجع</Button>
+          <Button
+            onClick={handleCancelAuction}
+            color="error"
+            variant="contained"
+            disabled={cancelAuctionMutation.isPending}
           >
             تأكيد الإلغاء
           </Button>

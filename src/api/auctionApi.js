@@ -6,9 +6,15 @@ export const fetchAuctions = async () => {
   return response.data;
 };
 
+export const fetchLatestAuctions = async () => {
+  const response = await axiosInstance.get("/bids/latest");
+  return response.data;
+};
+
 // جلب تفاصيل مزاد محدد
 export const fetchAuctionDetails = async (bidId) => {
   const response = await axiosInstance.get(`/bids/${bidId}`);
+  console.log("au", response.data);
   return response.data;
 };
 
@@ -21,6 +27,11 @@ export const placeBid = async (bidData) => {
 // إلغاء مزايدة
 export const cancelBid = async (bidId) => {
   const response = await axiosInstance.post("/bids/cancel", { bid_id: bidId });
+  return response.data;
+};
+
+export const cancelAuction = async (bid_id) => {
+  const response = await axiosInstance.patch(`/bids/cancel/${bid_id}`);
   return response.data;
 };
 

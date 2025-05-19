@@ -10,6 +10,11 @@ export const addProduct = async (productData) => {
   return response.data;
 };
 
+export const fetchProductDetails = async (productId) => {
+  const response = await axiosInstance.get(`/products/${productId}`);
+  return response.data;
+};
+
 // إضافة مزاد جديد
 export const addAuction = async (auctionData) => {
   const response = await axiosInstance.post("/bids", auctionData);
@@ -32,7 +37,12 @@ export const deleteProduct = async (productId) => {
 export const updateProduct = async (productId, productData) => {
   const response = await axiosInstance.put(
     `/products/${productId}`,
-    productData
+    productData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
   );
   return response.data;
 };
@@ -45,9 +55,7 @@ export const fetchLatestProducts = async () => {
 
 // البحث عن منتجات
 export const searchProducts = async (query) => {
-  const response = await axiosInstance.post("/products/search", {
-    search: query,
-  });
+  const response = await axiosInstance.get(`/products/search?search=${query}`);
   return response.data;
 };
 
@@ -60,7 +68,7 @@ export const fetchProductsByCategory = async (categoryId) => {
 // جلب منتجات حسب الفئة الفرعية
 export const fetchProductsBySubcategory = async (categoryId, subcategoryId) => {
   const response = await axiosInstance.get(
-    `/category/${categoryId}/${subcategoryId}`
+    `/products/category/${categoryId}/${subcategoryId}`
   );
   return response.data;
 };

@@ -30,6 +30,7 @@ import CategoryPage from "./pages/CategoryPage.jsx";
 import DashboardPage from "./pages/admin/Dashboard.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
 import ContactPage from "./pages/ContactPage.jsx";
+import { ProtectedRoute } from "./pages/protectedPage.jsx";
 
 // RTL setup for Arabic
 const cacheRtl = createCache({
@@ -120,7 +121,14 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/wallet" element={<WalletPage />} />
             <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/my-products" element={<MyProductPage />} />
+            <Route
+              path="/my-products"
+              element={
+                <ProtectedRoute roles={["seller"]}>
+                  <MyProductPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/messages" element={<MessagesPage />} />
             <Route path="/chat/:id" element={<ChatPage />} />
             <Route path="/cart" element={<CartPage />} />
@@ -132,7 +140,14 @@ function App() {
               path="/category/:categoryId/:subcategoryId"
               element={<CategoryPage />}
             />
-            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/seller/:id" element={<SellerProfilePage />} />
           </Routes>
           <Footer />

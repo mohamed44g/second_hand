@@ -29,6 +29,8 @@ import { PhotoCamera, Close as CloseIcon } from "@mui/icons-material";
 import { useMutation } from "@tanstack/react-query";
 import { addProduct, addAuction, fetchCategories } from "../../api/productApi";
 import { useQuery } from "@tanstack/react-query";
+import { arEG } from "date-fns/locale"; // Import Arabic locale for date-fns
+import { format } from "date-fns"; // Import format from date-fns
 
 const AddProductForm = ({ open, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -63,7 +65,7 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
     is_auction: false,
     auction_end_time: null,
     minimum_increment: "",
-    minimumNonCancellablePrice: "", // New field added
+    minimumNonCancellablePrice: "",
     file: null,
   });
 
@@ -71,19 +73,27 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
   const addProductMutation = useMutation({
     mutationFn: addProduct,
     onSuccess: (data) => {
-      // إذا كان المنتج مزاداً، قم بإضافة المزاد
       if (formData.is_auction) {
         const deviceId = data.data.device.device_id;
+        // Format auction_end_time as local EEST time (YYYY-MM-DD HH:mm:ss)
+        const formattedEndTime = format(
+          formData.auction_end_time,
+          "yyyy-MM-dd HH:mm:ss"
+        );
         const auctionData = {
           device_id: deviceId,
           minimum_increment: +formData.minimum_increment,
-          auction_end_time: formData.auction_end_time,
-          minimumNonCancellablePrice: +formData.minimumNonCancellablePrice, // Include the new field
+          auction_end_time: formattedEndTime, // Send as local EEST time, e.g., "2025-05-14 00:00:00"
+          minimumNonCancellablePrice: +formData.minimumNonCancellablePrice,
         };
         addAuctionMutation.mutate(auctionData);
       } else {
         handleSuccess();
       }
+    },
+
+    onError: () => {
+      setLoading(false);
     },
   });
 
@@ -92,6 +102,9 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
     mutationFn: addAuction,
     onSuccess: () => {
       handleSuccess();
+    },
+    onError: () => {
+      setLoading(false);
     },
   });
 
@@ -118,7 +131,7 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
       is_auction: false,
       auction_end_time: null,
       minimum_increment: "",
-      minimumNonCancellablePrice: "", // Reset the new field
+      minimumNonCancellablePrice: "",
       file: null,
     });
     setSelectedFiles([]);
@@ -128,25 +141,23 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-
-    // If main category changes, update subcategories
     if (name === "main_category_id") {
+      // Reset subcategory when main category changes
       setFormData({
         ...formData,
         main_category_id: value,
+        subcategory_id: "", // Reset subcategory
       });
-    }
-
-    // If starting price changes and it's an auction, update current price
-    if (name === "starting_price" && formData.is_auction) {
+    } else if (name === "starting_price" && formData.is_auction) {
       setFormData({
         ...formData,
         starting_price: value,
         current_price: value,
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
       });
     }
   };
@@ -156,13 +167,11 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
     setFormData({
       ...formData,
       is_auction: checked,
-      // Reset auction-specific fields if turning off auction
       auction_end_time: checked ? formData.auction_end_time : null,
       minimum_increment: checked ? formData.minimum_increment : "",
       minimumNonCancellablePrice: checked
         ? formData.minimumNonCancellablePrice
-        : "", // Reset the new field
-      // Set current price to starting price for auctions
+        : "",
       current_price: checked ? formData.starting_price : formData.current_price,
     });
   };
@@ -179,7 +188,6 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
     if (files.length > 0) {
       setSelectedFiles((prevFiles) => [...prevFiles, ...files]);
 
-      // Create preview URLs for all files
       const newPreviewUrls = [];
       files.forEach((file) => {
         const reader = new FileReader();
@@ -206,7 +214,7 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
     if (!formData.description.trim()) errors.description = "وصف المنتج مطلوب";
     if (!formData.main_category_id)
       errors.main_category_id = "الفئة الرئيسية مطلوبة";
-    if (!formData.subcategory_id)
+    if (formData.main_category_id && !formData.subcategory_id)
       errors.subcategory_id = "الفئة الفرعية مطلوبة";
     if (!formData.starting_price) errors.starting_price = "السعر المبدئي مطلوب";
     if (
@@ -221,6 +229,14 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
     if (formData.is_auction) {
       if (!formData.auction_end_time)
         errors.auction_end_time = "تاريخ انتهاء المزاد مطلوب";
+      else {
+        // Validate that auction_end_time is in the future
+        const now = new Date();
+        const endTime = new Date(formData.auction_end_time);
+        if (endTime <= now)
+          errors.auction_end_time =
+            "تاريخ انتهاء المزاد يجب أن يكون في المستقبل";
+      }
       if (!formData.minimum_increment)
         errors.minimum_increment = "الحد الأدنى للزيادة مطلوب";
       if (
@@ -244,6 +260,12 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
       )
         errors.minimumNonCancellablePrice =
           "يجب أن يكون الحد الأدنى لغير القابل للإلغاء أكبر من أو يساوي السعر المبدئي";
+      if (
+        Number(formData.minimumNonCancellablePrice) >
+        2 * Number(formData.starting_price)
+      )
+        errors.minimumNonCancellablePrice =
+          "الحد الأدنى لغير القابل للإلغاء يجب ألا يتجاوز ضعف السعر المبدئي";
     }
 
     if (selectedFiles.length === 0) errors.file = "صورة المنتج مطلوبة";
@@ -259,7 +281,6 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
 
     setLoading(true);
 
-    // إعداد بيانات المنتج للإرسال
     const productFormData = new FormData();
     productFormData.append("name", formData.name);
     productFormData.append("description", formData.description);
@@ -274,10 +295,8 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
       productFormData.append("accessories", formData.accessories);
     }
 
-    // إضافة حقل is_auction فقط (بدون تفاصيل المزاد)
     productFormData.append("is_auction", formData.is_auction);
 
-    // إضافة الصور
     if (selectedFiles.length > 0) {
       console.log("selectedFiles", selectedFiles);
       selectedFiles.forEach((file, index) => {
@@ -285,9 +304,16 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
       });
     }
 
-    // إرسال طلب إضافة المنتج
     addProductMutation.mutate(productFormData);
   };
+
+  // Filter subcategories based on selected main category
+  const filteredSubCategories = subCategories
+    ? subCategories.filter(
+        (subcategory) =>
+          subcategory.main_category_id === formData.main_category_id
+      )
+    : [];
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -299,14 +325,12 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
       <DialogContent dividers>
         {(addProductMutation.isError || addAuctionMutation.isError) && (
           <Alert severity="error" sx={{ mb: 3 }}>
-            حدث خطأ أثناء إضافة المنتج. يرجى المحاولة مرة أخرى.
-            {addProductMutation.error?.message ||
-              addAuctionMutation.error?.message}
+            {addProductMutation.error.response?.data?.message ||
+              addAuctionMutation.error.response?.data?.message}
           </Alert>
         )}
 
         <Grid container spacing={3}>
-          {/* Product Image */}
           <Grid item xs={12} md={4}>
             <Box
               sx={{
@@ -411,7 +435,6 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
             </Box>
           </Grid>
 
-          {/* Product Details Form */}
           <Grid item xs={12} md={8}>
             <Grid container spacing={2}>
               <Grid item xs={12}>
@@ -475,6 +498,7 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
                   fullWidth
                   required
                   error={!!formErrors.subcategory_id}
+                  disabled={!formData.main_category_id}
                 >
                   <InputLabel>الفئة الفرعية</InputLabel>
                   <Select
@@ -483,15 +507,24 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
                     onChange={handleInputChange}
                     label="الفئة الفرعية"
                   >
-                    {subCategories &&
-                      subCategories.map((subcategory) => (
+                    {!formData.main_category_id ? (
+                      <MenuItem value="" disabled>
+                        اختر الفئة الرئيسية أولاً
+                      </MenuItem>
+                    ) : filteredSubCategories.length > 0 ? (
+                      filteredSubCategories.map((subcategory) => (
                         <MenuItem
                           key={subcategory.subcategory_id}
                           value={subcategory.subcategory_id}
                         >
                           {subcategory.subcategory_name}
                         </MenuItem>
-                      ))}
+                      ))
+                    ) : (
+                      <MenuItem value="" disabled>
+                        لا توجد فئات فرعية متاحة
+                      </MenuItem>
+                    )}
                   </Select>
                   {formErrors.subcategory_id && (
                     <FormHelperText>{formErrors.subcategory_id}</FormHelperText>
@@ -566,7 +599,10 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
               {formData.is_auction && (
                 <>
                   <Grid item xs={12} sm={6}>
-                    <LocalizationProvider dateAdapter={AdapterDateFns}>
+                    <LocalizationProvider
+                      dateAdapter={AdapterDateFns}
+                      adapterLocale={arEG}
+                    >
                       <DateTimePicker
                         label="تاريخ انتهاء المزاد"
                         value={formData.auction_end_time}
@@ -580,6 +616,7 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
                             helperText={formErrors.auction_end_time}
                           />
                         )}
+                        minDateTime={new Date()}
                       />
                     </LocalizationProvider>
                   </Grid>
@@ -633,7 +670,9 @@ const AddProductForm = ({ open, onClose, onSuccess }) => {
           disabled={
             loading ||
             addProductMutation.isPending ||
-            addAuctionMutation.isPending
+            addAuctionMutation.isPending ||
+            addProductMutation.isError ||
+            addAuctionMutation.isError
           }
           startIcon={
             (loading ||

@@ -30,9 +30,10 @@ import {
   CheckCircle as CheckCircleIcon,
   RemoveCircle as RemoveCircleIcon,
   RateReview as RateReviewIcon,
+  Visibility as VisibilityIcon,
 } from "@mui/icons-material";
+import { Link } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
-import { allReports } from "../../data/fakedata";
 
 // تعريف ألوان حالات البلاغات
 const statusColors = {
@@ -64,7 +65,7 @@ const ReportsManagement = () => {
   const [selectedStatus, setSelectedStatus] = useState("");
 
   // استخدام البيانات الحقيقية
-  const [reports, setReports] = useState(allReports);
+  const [reports, setReports] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -90,6 +91,8 @@ const ReportsManagement = () => {
 
     fetchReports();
   }, []);
+
+  console.log("Reports:", reports);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -187,6 +190,22 @@ const ReportsManagement = () => {
     page * rowsPerPage + rowsPerPage
   );
 
+  // تحديد رابط التفاصيل بناءً على نوع الكيان
+  const getDetailsLink = (report) => {
+    switch (report.reported_entity_type) {
+      case "device":
+        return `/product/${report.reported_entity_id}`;
+      case "auction":
+        return `/auction/${report.reported_entity_id}`;
+      case "user":
+        return `/seller/${report.reported_entity_id}`;
+      case "message":
+        return `/chat/${report.chat_id}`;
+      default:
+        return "#";
+    }
+  };
+
   return (
     <Box>
       <Box
@@ -269,6 +288,16 @@ const ReportsManagement = () => {
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: "flex", gap: 1 }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<VisibilityIcon />}
+                            component={Link}
+                            to={getDetailsLink(report)}
+                            color="primary"
+                          >
+                            إطلاع على تفاصيل المشكلة
+                          </Button>
                           <Button
                             variant="outlined"
                             size="small"

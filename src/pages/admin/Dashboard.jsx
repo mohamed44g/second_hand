@@ -19,11 +19,13 @@ import {
   AttachMoney as MoneyIcon,
   Inventory as InventoryIcon,
   Gavel as GavelIcon,
+  VerifiedUser as VerifiedUserIcon,
 } from "@mui/icons-material";
 import UsersManagement from "../../components/admin/UsersManagement";
 import OrdersManagement from "../../components/admin/OrdersManagement";
 import SellersManagement from "../../components/admin/SellersManagement";
 import ReportsManagement from "../../components/admin/ReportsManagement";
+import QualityControlManagement from "../../components/admin/QualityControlManagement";
 import axiosInstance from "../../api/axiosInstance";
 
 // مكون لعرض بطاقة إحصائية
@@ -58,11 +60,11 @@ const StatCard = ({ icon, title, value, color }) => {
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [stats, setStats] = useState({
-    total_users: 2,
-    total_sellers: 1,
-    total_sales: 10,
-    total_revenue: 1000,
-    total_ads_revenue: 500,
+    total_users: 0,
+    total_sellers: 0,
+    total_sales: 0,
+    total_revenue: 0,
+    total_ads_revenue: 0,
     total_products: 0,
     total_auctions: 0,
   });
@@ -70,27 +72,27 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
 
   // جلب إحصائيات النظام
-  // useEffect(() => {
-  //   const fetchStats = async () => {
-  //     try {
-  //       setIsLoading(true);
-  //       const response = await axiosInstance.get("/admin/statistics");
-  //       if (response.data.status === "success") {
-  //         setStats(response.data.data);
-  //       } else {
-  //         setError("فشل في جلب إحصائيات النظام");
-  //       }
-  //     } catch (err) {
-  //       setError(
-  //         err.response?.data?.message || "حدث خطأ أثناء جلب إحصائيات النظام"
-  //       );
-  //     } finally {
-  //       setIsLoading(false);
-  //     }
-  //   };
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axiosInstance.get("/admin/statistics");
+        if (response.data.status === "success") {
+          setStats(response.data.data);
+        } else {
+          setError("فشل في جلب إحصائيات النظام");
+        }
+      } catch (err) {
+        setError(
+          err.response?.data?.message || "حدث خطأ أثناء جلب إحصائيات النظام"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  //   fetchStats();
-  // }, []);
+    fetchStats();
+  }, []);
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -176,6 +178,11 @@ const Dashboard = () => {
             <Tab label="الطلبات" />
             <Tab label="البائعين" />
             <Tab label="البلاغات" />
+            <Tab
+              label="قسم الجودة"
+              icon={<VerifiedUserIcon />}
+              iconPosition="start"
+            />
           </Tabs>
         </Paper>
 
@@ -185,6 +192,7 @@ const Dashboard = () => {
           {activeTab === 1 && <OrdersManagement />}
           {activeTab === 2 && <SellersManagement />}
           {activeTab === 3 && <ReportsManagement />}
+          {activeTab === 4 && <QualityControlManagement />}
         </Box>
       </Box>
     </Container>

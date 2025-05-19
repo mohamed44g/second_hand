@@ -42,6 +42,7 @@ import AddProductForm from "../components/Products/AddProductForm";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import ProductCard from "../components/ProductCard";
+import EdidProductForm from "../components/Products/EditProductForm";
 
 const MyProductsPage = () => {
   const [openDialog, setOpenDialog] = useState(false);
@@ -49,12 +50,13 @@ const MyProductsPage = () => {
   const queryClient = useQueryClient();
 
   const [openPromoteDialog, setOpenPromoteDialog] = useState(false);
+  const [EditDialog, setEditDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [promotionDays, setPromotionDays] = useState(1);
   const [endDate, setEndDate] = useState(
     new Date(Date.now() + 24 * 60 * 60 * 1000)
   ); // Tomorrow
-  const [promotionCost, setPromotionCost] = useState(100); // 100 EGP per day
+  const [promotionCost, setPromotionCost] = useState(50); // 100 EGP per day
 
   // جلب منتجات المستخدم
   const {
@@ -114,8 +116,13 @@ const MyProductsPage = () => {
     setSelectedProduct(product);
     setPromotionDays(1);
     setEndDate(new Date(Date.now() + 24 * 60 * 60 * 1000)); // Tomorrow
-    setPromotionCost(100); // Reset to 100 EGP
+    setPromotionCost(50); // Reset to 100 EGP
     setOpenPromoteDialog(true);
+  };
+
+  const handelEditDialog = (product) => {
+    setSelectedProduct(product);
+    setEditDialog(true);
   };
 
   const handleClosePromoteDialog = () => {
@@ -133,7 +140,7 @@ const MyProductsPage = () => {
     setEndDate(newEndDate);
 
     // Update cost
-    setPromotionCost(days * 100);
+    setPromotionCost(days * 50);
   };
 
   const handleEndDateChange = (newDate) => {
@@ -170,27 +177,6 @@ const MyProductsPage = () => {
     if (tabValue === 2) return product.is_auction; // Auctions
     return true;
   });
-
-  // تنسيق التاريخ
-  const formatDate = (dateString) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("ar-EG", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  // حساب الأيام المتبقية للإعلان
-  const getRemainingDays = (endDateString) => {
-    if (!endDateString) return 0;
-    const endDate = new Date(endDateString);
-    const today = new Date();
-    const diffTime = Math.abs(endDate - today);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
 
   return (
     <Container maxWidth="lg" sx={{ py: 6 }}>
@@ -235,7 +221,7 @@ const MyProductsPage = () => {
           }}
         >
           <Typography variant="body1">
-            إجمالي المنتجات: <strong>{filteredProducts.length}</strong>
+            إجمالي المنتجات: <strong>{filteredProducts?.length}</strong>
           </Typography>
         </Box>
       </Paper>
@@ -249,7 +235,8 @@ const MyProductsPage = () => {
         </Box>
       ) : isError ? (
         <Alert severity="error" sx={{ mb: 3 }}>
-          حدث خطأ أثناء تحميل المنتجات: {error?.message || "خطأ غير معروف"}
+          حدث خطأ أثناء تحميل المنتجات:{" "}
+          {error?.response?.data?.message || "خطأ غير معروف"}
         </Alert>
       ) : filteredProducts.length === 0 ? (
         <Box sx={{ textAlign: "center", py: 8 }}>
@@ -274,6 +261,7 @@ const MyProductsPage = () => {
                 isMyProductsPage={true}
                 onDelete={handleDeleteProduct}
                 onPromote={handleOpenPromoteDialog}
+                onEdit={handelEditDialog}
               />
             </Grid>
           ))}
@@ -285,6 +273,14 @@ const MyProductsPage = () => {
         open={openDialog}
         onClose={handleCloseDialog}
         onSuccess={handleProductSuccess}
+      />
+
+      {/* Edit Product Dialog */}
+      <EdidProductForm
+        open={EditDialog}
+        onClose={() => setEditDialog(false)}
+        onSuccess={handleProductSuccess}
+        productId={selectedProduct?.device_id}
       />
 
       {/* Promote Product Dialog */}
@@ -309,7 +305,7 @@ const MyProductsPage = () => {
                 سيتم عرض المنتج في قسم "منتجات مميزة" على الصفحة الرئيسية وفي
                 نتائج البحث.
                 <br />
-                تكلفة الإعلان: <strong>100 جنيه مصري</strong> لكل يوم.
+                تكلفة الإعلان: <strong>50 جنيه مصري</strong> لكل يوم.
               </Alert>
 
               <Grid container spacing={3} sx={{ mt: 1 }}>
@@ -370,7 +366,7 @@ const MyProductsPage = () => {
                   }}
                 >
                   <Typography>تكلفة اليوم الواحد:</Typography>
-                  <Typography fontWeight="bold">100 جنيه مصري</Typography>
+                  <Typography fontWeight="bold">50 جنيه مصري</Typography>
                 </Box>
                 <Divider sx={{ my: 1 }} />
                 <Box sx={{ display: "flex", justifyContent: "space-between" }}>
@@ -411,187 +407,3 @@ const MyProductsPage = () => {
 };
 
 export default MyProductsPage;
-
-// {<Card
-//   sx={{
-//     height: "100%",
-//     display: "flex",
-//     flexDirection: "column",
-//     position: "relative",
-//     ...(product.is_sponsored && {
-//       boxShadow: "0 0 0 2px #ffc107",
-//     }),
-//   }}
-// >
-//   {/* Sponsored Badge */}
-//   {product.is_sponsored && (
-//     <Tooltip
-//       title={`إعلان ممول حتى ${formatDate(
-//         product.ad_end_date
-//       )} (متبقي ${getRemainingDays(product.ad_end_date)} يوم)`}
-//       arrow
-//     >
-//       <Chip
-//         icon={<CampaignIcon />}
-//         label="ممول"
-//         color="warning"
-//         sx={{
-//           position: "absolute",
-//           top: 10,
-//           left: 10,
-//           zIndex: 10,
-//           fontWeight: "bold",
-//         }}
-//       />
-//     </Tooltip>
-//   )}
-
-//   <Box sx={{ position: "relative" }}>
-//     <CardMedia
-//       component="img"
-//       height="400"
-//       image={
-//         product.image_url ||
-//         "/placeholder.svg?height=200&width=200"
-//       }
-//       alt={product.name}
-//       sx={{ bgcolor: "black" }}
-//     />
-//     {product.is_auction && (
-//       <Chip
-//         label="مزاد"
-//         color="primary"
-//         sx={{
-//           position: "absolute",
-//           top: 10,
-//           right: 10,
-//           fontWeight: "bold",
-//         }}
-//       />
-//     )}
-//   </Box>
-//   <CardContent sx={{ flexGrow: 1 }}>
-//     <Box
-//       sx={{
-//         display: "flex",
-//         justifyContent: "space-between",
-//         mb: 1,
-//       }}
-//     >
-//       <Chip
-//         label={
-//           product.main_category_name || product.main_category_id
-//         }
-//         size="small"
-//         sx={{ bgcolor: "rgba(0,0,0,0.05)" }}
-//       />
-//       <Chip
-//         label={product.condition}
-//         size="small"
-//         color="primary"
-//         variant="outlined"
-//       />
-//     </Box>
-//     <Typography variant="h6" component="h3" gutterBottom>
-//       {product.name}
-//     </Typography>
-//     <Typography
-//       variant="body2"
-//       color="text.secondary"
-//       sx={{ mb: 2, height: 40, overflow: "hidden" }}
-//     >
-//       {product.description}
-//     </Typography>
-//     <Box sx={{ display: "flex", alignItems: "center" }}>
-//       <Typography
-//         variant="h6"
-//         component="span"
-//         color="primary.main"
-//         fontWeight="bold"
-//       >
-//         {Math.round(product.starting_price)} ج.م
-//       </Typography>
-//       {product.is_auction && product.bids_count > 0 && (
-//         <Chip
-//           label={`${product.bids_count} مزايدة`}
-//           size="small"
-//           sx={{ ml: 1 }}
-//           variant="outlined"
-//         />
-//       )}
-//     </Box>
-//     {product.is_auction && (
-//       <Typography
-//         variant="body2"
-//         color="text.secondary"
-//         sx={{ mt: 1 }}
-//       >
-//         ينتهي المزاد في:{" "}
-//         {new Date(product.auction_end_time).toLocaleDateString(
-//           "ar-EG"
-//         )}
-//       </Typography>
-//     )}
-
-//     {/* Sponsored Info */}
-//     {product.is_sponsored && (
-//       <Box
-//         sx={{
-//           mt: 2,
-//           p: 1,
-//           bgcolor: "warning.light",
-//           borderRadius: 1,
-//           opacity: 0.9,
-//         }}
-//       >
-//         <Typography variant="body2">
-//           <strong>إعلان ممول</strong> - ينتهي في:{" "}
-//           {formatDate(product.ad_end_date)}
-//         </Typography>
-//       </Box>
-//     )}
-//   </CardContent>
-//   <Divider />
-//   <CardActions sx={{ justifyContent: "space-between", p: 2 }}>
-//     <Box>
-//       <Button
-//         variant="outlined"
-//         size="small"
-//         startIcon={<EditIcon />}
-//         component={Link}
-//         to={`/edit-product/${product.device_id}`}
-//       >
-//         تعديل
-//       </Button>
-//       {!product.is_sponsored && (
-//         <Button
-//           variant="outlined"
-//           size="small"
-//           color="success"
-//           startIcon={<PaidIcon />}
-//           onClick={() => handleOpenPromoteDialog(product)}
-//           sx={{ ml: 1 }}
-//         >
-//           تمويل
-//         </Button>
-//       )}
-//     </Box>
-//     <Box>
-//       <IconButton
-//         size="small"
-//         color="primary"
-//         component={Link}
-//         to={`/product/${product.device_id}`}
-//       >
-//         <VisibilityIcon />
-//       </IconButton>
-//       <IconButton
-//         size="small"
-//         color="error"
-//         onClick={() => handleDeleteProduct(product.device_id)}
-//       >
-//         <DeleteIcon />
-//       </IconButton>
-//     </Box>
-//   </CardActions>
-// </Card>}

@@ -407,18 +407,6 @@ const ProductPage = () => {
                 </ListItemIcon>
                 <ListItemText primary="الإبلاغ عن هذا المنتج" />
               </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  navigator.clipboard.writeText(window.location.href);
-                  handleCloseMenu();
-                  showSnackbar("تم نسخ الرابط", "success");
-                }}
-              >
-                <ListItemIcon>
-                  <ShareIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary="مشاركة المنتج" />
-              </MenuItem>
             </Menu>
           </Box>
           {productImages.length > 1 && (
@@ -465,9 +453,9 @@ const ProductPage = () => {
             <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
               {product.rating && (
                 <>
-                  <Rating value={product.rating} precision={0.5} readOnly />
+                  <Rating value={product.rating} readOnly />
                   <Typography variant="body2" sx={{ ml: 1 }}>
-                    ({product.rating})
+                    ({parseInt(product.rating)})
                   </Typography>
                   <Divider orientation="vertical" flexItem sx={{ mx: 2 }} />
                 </>

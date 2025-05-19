@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AppBar,
   Toolbar,
@@ -17,7 +17,6 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemIcon,
   Divider,
   CircularProgress,
   Snackbar,
@@ -30,12 +29,13 @@ import {
   Person as PersonIcon,
   Menu as MenuIcon,
   ShoppingBag,
-  Gavel,
   Close as CloseIcon,
 } from "@mui/icons-material";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { searchProducts } from "../api/productApi";
+import axiosInstance from "../api/axiosInstance";
+import { getUserRole } from "../utils/checkUser";
 
 const Search = styled("div")(({ theme }) => ({
   position: "relative",
@@ -89,7 +89,10 @@ const Header = () => {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [userRole, setUserRole] = useState();
   const navigate = useNavigate();
+
+  console.log(userRole, "userRole");
 
   // استخدام React Query للبحث
   const searchMutation = useMutation({
@@ -122,10 +125,7 @@ const Header = () => {
 
   const handleSearchChange = (event) => {
     setSearchQuery(event.target.value);
-  };
 
-  const handleSearchSubmit = (event) => {
-    event.preventDefault();
     if (searchQuery.trim() === "") return;
 
     // إرسال طلب البحث
@@ -144,6 +144,11 @@ const Header = () => {
   const handleCloseSnackbar = () => {
     setSnackbarOpen(false);
   };
+
+  useEffect(() => {
+    const role = getUserRole();
+    setUserRole(role);
+  }, []);
 
   return (
     <AppBar
@@ -201,19 +206,17 @@ const Header = () => {
           </Box>
 
           <Box sx={{ position: "relative" }}>
-            <form onSubmit={handleSearchSubmit}>
-              <Search>
-                <SearchIconWrapper>
-                  <SearchIcon />
-                </SearchIconWrapper>
-                <StyledInputBase
-                  placeholder="ابحث عن منتجات..."
-                  inputProps={{ "aria-label": "search" }}
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                />
-              </Search>
-            </form>
+            <Search>
+              <SearchIconWrapper>
+                <SearchIcon />
+              </SearchIconWrapper>
+              <StyledInputBase
+                placeholder="ابحث عن منتجات..."
+                inputProps={{ "aria-label": "search" }}
+                value={searchQuery}
+                onChange={handleSearchChange}
+              />
+            </Search>
 
             {/* نتائج البحث */}
             {showSearchResults && (
@@ -274,10 +277,7 @@ const Header = () => {
                       >
                         <Box
                           component="img"
-                          src={
-                            product.image_url ||
-                            "/placeholder.svg?height=50&width=50"
-                          }
+                          src={`${axiosInstance.defaults.baseURL}/${product.image_url}`}
                           alt={product.name}
                           sx={{ width: 40, height: 40, mr: 1, borderRadius: 1 }}
                         />
@@ -337,15 +337,38 @@ const Header = () => {
         <MenuItem onClick={handleMenuClose} component={Link} to="/wallet">
           المحفظة
         </MenuItem>
-        <MenuItem onClick={handleMenuClose} component={Link} to="/my-products">
-          منتجاتي
-        </MenuItem>
+        {userRole === "seller" && (
+          <MenuItem
+            onClick={handleMenuClose}
+            component={Link}
+            to="/my-products"
+          >
+            منتجاتي
+          </MenuItem>
+        )}
+
+        {userRole === "admin" && (
+          <MenuItem onClick={handleMenuClose} component={Link} to="/dashboard">
+            لوحة التحكم
+          </MenuItem>
+        )}
         <MenuItem onClick={handleMenuClose} component={Link} to="/messages">
           الرسائل
         </MenuItem>
-        <MenuItem onClick={handleMenuClose} component={Link} to="/login">
-          تسجيل الدخول
-        </MenuItem>
+        {userRole === null ? (
+          <>
+            <MenuItem onClick={handleMenuClose} component={Link} to="/register">
+              إنشاء حساب
+            </MenuItem>
+            <MenuItem onClick={handleMenuClose} component={Link} to="/login">
+              تسجيل الدخول
+            </MenuItem>
+          </>
+        ) : (
+          <MenuItem onClick={handleMenuClose} component={Link} to="/logout">
+            تسجيل الخروج
+          </MenuItem>
+        )}
       </Menu>
 
       {/* Mobile Menu Drawer */}

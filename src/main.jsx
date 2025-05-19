@@ -10,38 +10,36 @@ import "./index.css";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false,
       retry: false,
     },
   },
 });
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-      <Toaster
-        position="top-center" // مكان الإشعار
-        toastOptions={{
-          duration: 3000, // مدة الإشعار (3 ثواني)
+  <QueryClientProvider client={queryClient}>
+    <App />
+    <Toaster
+      position="top-center" // مكان الإشعار
+      toastOptions={{
+        duration: 3000,
+        id: "auth-error", // مدة الإشعار (3 ثواني)
+        style: {
+          fontFamily: "Changa, sans-serif",
+          fontSize: "16px",
+        },
+        success: {
           style: {
-            fontFamily: "Changa, sans-serif",
-            fontSize: "16px",
+            background: "#4caf50",
+            color: "#fff",
           },
-          success: {
-            style: {
-              background: "#4caf50",
-              color: "#fff",
-            },
+        },
+        error: {
+          style: {
+            background: "#f44336",
+            color: "#fff",
           },
-          error: {
-            style: {
-              background: "#f44336",
-              color: "#fff",
-            },
-          },
-        }}
-      />
-    </QueryClientProvider>
-  </React.StrictMode>
+        },
+      }}
+    />
+  </QueryClientProvider>
 );

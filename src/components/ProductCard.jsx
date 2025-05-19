@@ -66,6 +66,7 @@ const ProductCardComponent = ({
   isAuctionsPage = false,
   onDelete,
   onPromote,
+  onEdit,
 }) => {
   // تنسيق التاريخ
   const formatDate = (dateString) => {
@@ -79,11 +80,15 @@ const ProductCardComponent = ({
   };
 
   // تنسيق وقت انتهاء المزاد
-  const formatAuctionEndTime = (endTime) => {
+  const formatAuctionEndTime = (endTime, bidStatus) => {
     const endDate = new Date(endTime);
     const now = new Date();
 
-    if (isAfter(endDate, now)) {
+    if (bidStatus === "ended") {
+      return "المزاد منتهى";
+    } else if (bidStatus === "cancled") {
+      return "المزاد ملغى";
+    } else if (isAfter(endDate, now)) {
       return `ينتهي ${formatDistanceToNow(endDate, {
         locale: arEG,
         addSuffix: true,
@@ -97,8 +102,29 @@ const ProductCardComponent = ({
   const isAuctionActive = (endTime) => {
     const endDate = new Date(endTime);
     const now = new Date();
+    if (device.bid_status === "ended") {
+      return true;
+    } else if (device.bid_status === "cancled") {
+      return true;
+    }
     return isAfter(endDate, now);
   };
+
+  // تحديد نص وألوان الـ Badge بناءً على حالة المنتج
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case "pending":
+        return { label: "بانتظار الموافقة", color: "warning" };
+      case "accepted":
+        return { label: "تم الموافقة", color: "success" };
+      case "rejected":
+        return { label: "تم الرفض", color: "error" };
+      default:
+        return { label: "", color: "default" };
+    }
+  };
+
+  const statusBadge = getStatusBadge(device.status);
 
   return (
     <ProductCard
@@ -116,6 +142,21 @@ const ProductCardComponent = ({
           sx={{
             position: "absolute",
             top: 10,
+            left: 10,
+            zIndex: 10,
+            fontWeight: "bold",
+          }}
+        />
+      )}
+
+      {/* Product Status Badge (pending/accepted/rejected) */}
+      {isMyProductsPage && device.status && (
+        <Chip
+          label={statusBadge.label}
+          color={statusBadge.color}
+          sx={{
+            position: "absolute",
+            top: device.is_sponsored ? 50 : 10, // تعديل الموقع إذا كان هناك Sponsored Badge
             left: 10,
             zIndex: 10,
             fontWeight: "bold",
@@ -147,9 +188,16 @@ const ProductCardComponent = ({
         {device.is_auction && (
           <Chip
             icon={<AccessTime fontSize="small" />}
-            label={formatAuctionEndTime(device.auction_end_time)}
+            label={formatAuctionEndTime(
+              device.auction_end_time,
+              device.bid_status
+            )}
             color={
-              isAuctionActive(device.auction_end_time) ? "warning" : "error"
+              device.bid_status === "cancled" || device.bid_status === "ended"
+                ? "error"
+                : isAuctionActive(device.auction_end_time)
+                ? "warning"
+                : "error"
             }
             sx={{
               position: "absolute",
@@ -210,7 +258,7 @@ const ProductCardComponent = ({
             {new Date(device.auction_end_time).toLocaleDateString("ar-EG")}
           </Typography>
         )}
-        {!isMyProductsPage && !isAuctionsPage && (
+        {!isMyProductsPage && (
           <>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
               المكان: {device.seller_address}
@@ -281,12 +329,11 @@ const ProductCardComponent = ({
                 variant="outlined"
                 size="small"
                 startIcon={<EditIcon />}
-                component={Link}
-                to={`/edit-product/${device.device_id}`}
+                onClick={() => onEdit(device)}
               >
                 تعديل
               </Button>
-              {!device.is_sponsored && (
+              {device.status === "accepted" && !device.is_sponsored && (
                 <Button
                   variant="outlined"
                   size="small"
@@ -328,11 +375,11 @@ const ProductCardComponent = ({
             startIcon={<Gavel />}
             component={Link}
             to={`/auction/${device.bid_id || device.device_id}`}
-            disabled={!isAuctionActive(device.auction_end_time)}
           >
-            {isAuctionActive(device.auction_end_time)
+            {isAuctionActive(device.auction_end_time) ||
+            device.bid_status === "ended"
               ? "المزايدة الآن"
-              : "انتهى المزاد"}
+              : "رؤية المزايدات"}
           </Button>
         ) : (
           <>
