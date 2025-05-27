@@ -147,6 +147,7 @@ const Header = () => {
 
   useEffect(() => {
     const role = getUserRole();
+    console.log(role, "role");
     setUserRole(role);
   }, []);
 
@@ -337,7 +338,7 @@ const Header = () => {
         <MenuItem onClick={handleMenuClose} component={Link} to="/wallet">
           المحفظة
         </MenuItem>
-        {userRole === "seller" && (
+        {userRole?.is_seller && (
           <MenuItem
             onClick={handleMenuClose}
             component={Link}
@@ -347,7 +348,7 @@ const Header = () => {
           </MenuItem>
         )}
 
-        {userRole === "admin" && (
+        {userRole?.is_admin && (
           <MenuItem onClick={handleMenuClose} component={Link} to="/dashboard">
             لوحة التحكم
           </MenuItem>

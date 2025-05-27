@@ -57,7 +57,7 @@ const CartPage = () => {
       showSnackbar("تم حذف المنتج من عربة التسوق بنجاح", "success");
     },
     onError: (error) => {
-      showSnackbar(`حدث خطأ: ${error.message}`, "error");
+      showSnackbar(`حدث خطأ: ${error?.response?.data?.message}`, "error");
     },
   });
 
@@ -70,7 +70,7 @@ const CartPage = () => {
       showSnackbar("تمت عملية الشراء بنجاح", "success");
     },
     onError: (error) => {
-      showSnackbar(`حدث خطأ: ${error.message}`, "error");
+      showSnackbar(`حدث خطأ: ${error?.response?.data?.message}`, "error");
     },
   });
 
@@ -90,6 +90,7 @@ const CartPage = () => {
     const checkoutData = {
       shipping_address: formData.shipping_address,
       card_details: formData.card_details,
+      with_wallet: formData.with_wallet,
     };
 
     checkoutCartMutation.mutate(checkoutData);
@@ -157,7 +158,7 @@ const CartPage = () => {
           <Button
             variant="contained"
             component={Link}
-            to="/"
+            to="/products"
             startIcon={<ArrowBackIcon />}
             sx={{ mt: 2 }}
           >
@@ -305,20 +306,6 @@ const CartPage = () => {
                   </Grid>
                 </Box>
               ))}
-
-              <Box
-                sx={{
-                  p: 3,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <Button component={Link} to="/" startIcon={<ArrowBackIcon />}>
-                  متابعة التسوق
-                </Button>
-                <Button startIcon={<StoreIcon />}>تصفح منتجات البائعين</Button>
-              </Box>
             </Paper>
           </Grid>
 

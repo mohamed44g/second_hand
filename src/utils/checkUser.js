@@ -13,6 +13,9 @@ export const getUserRole = () => {
     return null;
   }
   const decodedToken = token ? jwtDecode(token) : null;
-  const userRole = decodedToken.role;
+  const userRole = {
+    is_seller: decodedToken.is_seller,
+    is_admin: decodedToken.is_admin,
+  };
   return userRole;
 };

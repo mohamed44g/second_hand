@@ -13,20 +13,51 @@ import {
   FormControlLabel,
   FormControl,
   FormLabel,
-  IconButton,
+  Select,
+  MenuItem,
 } from "@mui/material";
-import { PhotoCamera } from "@mui/icons-material";
 import { useMutation } from "@tanstack/react-query";
 import axiosInstance from "../api/axiosInstance";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
+// قائمة المحافظات المصرية المحددة
+const egyptianGovernorates = [
+  "القاهرة",
+  "الجيزة",
+  "الأسكندرية",
+  "الدقهلية",
+  "البحيرة",
+  "الشرقية",
+  "الغربية",
+  "المنوفية",
+  "القليوبية",
+  "الفيوم",
+  "بني سويف",
+  "المنيا",
+  "أسيوط",
+  "سوهاج",
+  "قنا",
+  "أسوان",
+  "الأقصر",
+  "البحر الأحمر",
+  "الوادي الجديد",
+  "شمال سيناء",
+  "جنوب سيناء",
+  "الإسماعيلية",
+  "السويس",
+  "دمنهور",
+  "مرسى مطروح",
+];
+
 const steps = ["المعلومات الشخصية", "معلومات الحساب", "التحقق"];
+
+// Regex لتأكيد كلمة المرور (8 أحرف على الأقل، حرف صغير، كبير، رقم، ورمز خاص)
+const passwordRegex = /^(?=.[a-z])(?=.[A-Z])(?=.\d)(?=.[\W_]).{8,}$/;
 
 const RegisterPage = () => {
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
-  const [previewUrl, setPreviewUrl] = useState(""); // State for image preview
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -34,7 +65,8 @@ const RegisterPage = () => {
     first_name: "",
     last_name: "",
     phone_number: "",
-    address: "",
+    governorate: "",
+    address_detail: "",
     national_id: "",
     is_seller: false,
     verificationCode: "",
@@ -51,6 +83,13 @@ const RegisterPage = () => {
     setFormData({ ...formData, is_seller: e.target.value === "seller" });
   };
 
+  // دمج المحافظة والعنوان عند الإرسال
+  const getCombinedAddress = () => {
+    const { governorate, address_detail } = formData;
+    return governorate && address_detail
+      ? `${governorate} - ${address_detail}`
+      : "";
+  };
 
   // useMutation لإرسال طلب توليد كود التحقق
   const generateCodeMutation = useMutation({
@@ -69,7 +108,7 @@ const RegisterPage = () => {
   // useMutation لإرسال بيانات التسجيل
   const registerMutation = useMutation({
     mutationFn: (data) => {
-      // Prepare FormData for multipart/form-data submission
+      const combinedAddress = getCombinedAddress();
       const formDataToSend = new FormData();
       formDataToSend.append("username", data.username);
       formDataToSend.append("email", data.email);
@@ -77,14 +116,14 @@ const RegisterPage = () => {
       formDataToSend.append("first_name", data.first_name);
       formDataToSend.append("last_name", data.last_name);
       formDataToSend.append("phone_number", data.phone_number);
-      formDataToSend.append("address", data.address);
+      formDataToSend.append("address", combinedAddress);
       formDataToSend.append("national_id", data.national_id);
       formDataToSend.append("is_seller", data.is_seller);
       formDataToSend.append("verificationCode", data.verificationCode);
 
       return axiosInstance.post("/users/register", formDataToSend, {
         headers: {
-          "Content-Type": "multipart/form-data", // Fixed typo
+          "Content-Type": "multipart/form-data",
         },
       });
     },
@@ -92,7 +131,6 @@ const RegisterPage = () => {
       toast.success(response.data.message);
       setActiveStep((prev) => prev + 1);
       if (activeStep === steps.length - 1) {
-        // Fixed condition to redirect after verification step
         setTimeout(() => {
           navigate("/login");
         }, 2000);
@@ -105,32 +143,35 @@ const RegisterPage = () => {
 
   const handleNext = () => {
     if (activeStep === 0) {
-      // التحقق من الحقول المطلوبة في المرحلة الأولى
       if (
         !formData.first_name ||
         !formData.last_name ||
         !formData.phone_number
       ) {
-        toast.error("يرجى ملء جميع الحقول المطلوبة بما في ذلك الصورة");
+        toast.error("يرجى ملء جميع الحقول المطلوبة");
         return;
       }
       setActiveStep((prev) => prev + 1);
     } else if (activeStep === 1) {
-      // التحقق من الحقول المطلوبة في المرحلة الثانية
       if (
         !formData.username ||
         !formData.email ||
         !formData.password ||
-        !formData.address
+        !formData.governorate ||
+        !formData.address_detail
       ) {
         toast.error("يرجى ملء جميع الحقول المطلوبة");
         return;
       }
-
-      // طلب توليد كود التحقق
+      // التحقق من كلمة المرور بناءً على الباترن
+      if (!passwordRegex.test(formData.password)) {
+        toast.error(
+          "كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل، وحرف صغير، وحرف كبير، ورقم، ورمز خاص (مثل !@#$%)"
+        );
+        return;
+      }
       generateCodeMutation.mutate(formData.email);
     } else if (activeStep === 2) {
-      // التحقق من الكود وتسجيل الحساب
       if (!formData.verificationCode) {
         toast.error("يرجى إدخال كود التحقق");
         return;
@@ -235,14 +276,43 @@ const RegisterPage = () => {
                 value={formData.password}
                 onChange={handleChange}
                 required
+                error={
+                  !passwordRegex.test(formData.password) &&
+                  formData.password !== ""
+                }
+                helperText={
+                  !passwordRegex.test(formData.password) &&
+                  formData.password !== ""
+                    ? "كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل، وحرف صغير، وحرف كبير، ورقم، ورمز خاص (مثل !@#$%)"
+                    : ""
+                }
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth required>
+                <Select
+                  name="governorate"
+                  value={formData.governorate}
+                  onChange={handleChange}
+                  displayEmpty
+                  renderValue={(selected) =>
+                    selected ? selected : "اختر المحافظة"
+                  }
+                >
+                  {egyptianGovernorates.map((governorate) => (
+                    <MenuItem key={governorate} value={governorate}>
+                      {governorate}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="العنوان"
-                name="address"
-                value={formData.address}
+                label="اسم الشارع أو المنطقة"
+                name="address_detail"
+                value={formData.address_detail}
                 onChange={handleChange}
                 required
               />

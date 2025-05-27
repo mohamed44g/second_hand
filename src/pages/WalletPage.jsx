@@ -33,8 +33,9 @@ import {
   ArrowForward,
   ArrowBack,
   ShoppingCart,
-  Gavel,
+  HourglassFull,
   Store,
+  HourglassEmpty,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -174,6 +175,10 @@ const WalletPage = () => {
       return "error.main";
     } else if (type === "purchase") {
       return "success.main";
+    } else if (type === "sale") {
+      return "success.main";
+    } else if (type === "pending") {
+      return "warning.main";
     } else {
       return "text.primary";
     }
@@ -187,6 +192,10 @@ const WalletPage = () => {
       return <ArrowUpward color="error" />;
     } else if (type === "purchase") {
       return <ShoppingCart color="success" />;
+    } else if (type === "sale") {
+      return <ShoppingCart color="success" />;
+    } else if (type === "pending") {
+      return <HourglassEmpty color="warning" />;
     } else {
       return <ArrowDownward color="primary" />;
     }
@@ -346,9 +355,16 @@ const WalletPage = () => {
                               transaction.transaction_type
                             )}
                           >
-                            {transaction.transaction_type === "withdraw" ||
-                            transaction.description.includes("سحب")
+                            {transaction.transaction_type === "withdraw"
                               ? "-"
+                              : transaction.transaction_type === "deposit"
+                              ? "+"
+                              : transaction.transaction_type === "purchase"
+                              ? "-"
+                              : transaction.transaction_type === "sale"
+                              ? "+"
+                              : transaction.transaction_type === "pending"
+                              ? "+"
                               : "+"}
                             {parseInt(transaction.amount)} ج.م
                           </Typography>
@@ -356,17 +372,26 @@ const WalletPage = () => {
                             label={
                               transaction.transaction_type === "deposit"
                                 ? "إيداع"
-                                : transaction.transaction_type === "withdraw" ||
-                                  transaction.description.includes("سحب")
+                                : transaction.transaction_type === "withdraw"
                                 ? "سحب"
                                 : transaction.transaction_type === "purchase"
                                 ? "شراء"
+                                : transaction.transaction_type === "sale"
+                                ? "بيع"
+                                : transaction.transaction_type === "pending"
+                                ? "معلق"
                                 : transaction.transaction_type
                             }
                             size="small"
                             color={
                               transaction.transaction_type === "deposit"
                                 ? "success"
+                                : transaction.transaction_type === "purchase"
+                                ? "success"
+                                : transaction.transaction_type === "sale"
+                                ? "success"
+                                : transaction.transaction_type === "pending"
+                                ? "warning"
                                 : transaction.transaction_type === "withdraw"
                                 ? "error"
                                 : "primary"

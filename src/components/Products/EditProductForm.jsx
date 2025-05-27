@@ -51,7 +51,6 @@ const EditProductForm = ({ open, onClose, productId }) => {
     condition: "",
     manufacturing_year: new Date().getFullYear(),
     accessories: "",
-    is_auction: false,
   });
 
   const [files, setFiles] = useState([]); // الصور الجديدة
@@ -93,7 +92,6 @@ const EditProductForm = ({ open, onClose, productId }) => {
         manufacturing_year:
           product.manufacturing_year || new Date().getFullYear(),
         accessories: product.accessories || "",
-        is_auction: product.is_auction || false,
       });
 
       // تحميل الصور الحالية للمنتج
@@ -420,21 +418,6 @@ const EditProductForm = ({ open, onClose, productId }) => {
                   variant="outlined"
                   margin="normal"
                   placeholder="مثال: شاحن، حافظة، سماعات"
-                />
-              </Grid>
-
-              {/* هل للمزاد */}
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      name="is_auction"
-                      checked={formData.is_auction}
-                      onChange={handleChange}
-                      color="primary"
-                    />
-                  }
-                  label="هل الجهاز للمزاد؟"
                 />
               </Grid>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Container,
@@ -46,6 +46,7 @@ import { purchaseProduct } from "../api/cartApi";
 import { startNewChat } from "../api/chatApi";
 import ReportDialog from "../components/ReportDialog";
 import { device } from "../data/fakedata";
+import { getUserID } from "../utils/checkUser";
 
 // إضافة دالة لجلب بيانات المنتج
 const fetchProduct = async (productId) => {
@@ -66,6 +67,7 @@ const ProductPage = () => {
   const [reportEntityType, setReportEntityType] = useState("");
   const [reportEntityId, setReportEntityId] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [isCurrentUserSeller, setIsCurrentUserSeller] = useState(false);
 
   const navigate = useNavigate();
 
@@ -81,6 +83,9 @@ const ProductPage = () => {
     enabled: !!id, // تفعيل الاستعلام فقط عندما يكون هناك معرف للمنتج
   });
 
+  // استخراج بيانات المنتج من الاستجابة
+  const product = productData?.data?.product || device;
+
   // إضافة المنتج إلى عربة التسوق
   const addToCartMutation = useMutation({
     mutationFn: addToCart,
@@ -88,7 +93,7 @@ const ProductPage = () => {
       showSnackbar("تمت إضافة المنتج إلى عربة التسوق بنجاح", "success");
     },
     onError: (error) => {
-      showSnackbar(`حدث خطأ: ${error.message}`, "error");
+      showSnackbar(`حدث خطأ: ${error?.response?.data?.message}`, "error");
     },
   });
 
@@ -103,6 +108,13 @@ const ProductPage = () => {
       showSnackbar(`حدث خطأ: ${error.message}`, "error");
     },
   });
+
+  // تعين اذا كان المستخدم الحالي هو البائع
+  useEffect(() => {
+    if (getUserID() === product.seller_id) {
+      setIsCurrentUserSeller(true);
+    }
+  }, [product]);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
@@ -140,6 +152,7 @@ const ProductPage = () => {
       quantity: quantity,
       shipping_address: formData.shipping_address,
       card_details: formData.card_details,
+      with_wallet: formData.with_wallet,
     };
 
     purchaseProductMutation.mutate(purchaseData);
@@ -228,9 +241,6 @@ const ProductPage = () => {
       </Container>
     );
   }
-
-  // استخراج بيانات المنتج من الاستجابة
-  const product = productData?.data?.product || device;
 
   // استخراج صور المنتج من الاستجابة
   const productImages = productData?.data?.images?.length
@@ -511,61 +521,51 @@ const ProductPage = () => {
             </Box>
 
             <Divider sx={{ my: 3 }} />
-
-            <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
-              <Avatar sx={{ mr: 2 }} />
-              <Box>
-                <Typography
-                  variant="subtitle1"
-                  fontWeight="bold"
-                  component={Link}
-                  to={`/seller/${product.seller_id}`}
-                  sx={{
-                    textDecoration: "none",
-                    color: "inherit",
-                    "&:hover": { color: "primary.main" },
-                  }}
+            {!isCurrentUserSeller && (
+              <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                <Avatar sx={{ mr: 2 }} />
+                <Box>
+                  <Typography
+                    variant="subtitle1"
+                    fontWeight="bold"
+                    component={Link}
+                    to={`/seller/${product.seller_id}`}
+                    sx={{
+                      textDecoration: "none",
+                      color: "inherit",
+                      "&:hover": { color: "primary.main" },
+                    }}
+                  >
+                    {product.seller_username}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {product.seller_address}
+                  </Typography>
+                </Box>
+                <Button
+                  variant="outlined"
+                  startIcon={<Chat />}
+                  sx={{ ml: "auto", mr: 1 }}
+                  onClick={handleChatWithSeller}
                 >
-                  {product.seller_username}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {product.seller_address}
-                </Typography>
+                  محادثة
+                </Button>
+
+                {/* أيقونة الإبلاغ عن البائع */}
+                <Tooltip title="الإبلاغ عن البائع" arrow>
+                  <IconButton
+                    color="error"
+                    size="small"
+                    onClick={handleReportSeller}
+                  >
+                    <FlagIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
               </Box>
-              <Button
-                variant="outlined"
-                startIcon={<Chat />}
-                sx={{ ml: "auto", mr: 1 }}
-                onClick={handleChatWithSeller}
-              >
-                محادثة
-              </Button>
-
-              {/* أيقونة الإبلاغ عن البائع */}
-              <Tooltip title="الإبلاغ عن البائع" arrow>
-                <IconButton
-                  color="error"
-                  size="small"
-                  onClick={handleReportSeller}
-                >
-                  <FlagIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Box>
+            )}
 
             <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
-              {product.is_auction ? (
-                // زر المزايدة للمنتجات المزادية
-                <Button
-                  variant="contained"
-                  size="large"
-                  startIcon={<Gavel />}
-                  fullWidth
-                >
-                  المزايدة الآن
-                </Button>
-              ) : (
-                // أزرار الشراء وإضافة للعربة للمنتجات العادية
+              {product.status === "accepted" && !isCurrentUserSeller && (
                 <>
                   <Button
                     variant="contained"

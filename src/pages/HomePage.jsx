@@ -39,7 +39,7 @@ import { fetchLatestProducts, fetchCategories } from "../api/productApi";
 import { fetchLatestAuctions } from "../api/auctionApi";
 import sellIcon from "../assets/images/sellIcon.png";
 import ProdectCard from "../components/ProductCard";
-import banner from "../assets/images/baner.jpg";
+import BannerCarousel from "../components/BannerCarousel";
 
 // Styled components
 const HeroSection = styled(Box)(({ theme }) => ({
@@ -54,33 +54,6 @@ const HeroSection = styled(Box)(({ theme }) => ({
   position: "relative",
 }));
 
-const CategoryCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(2),
-  textAlign: "center",
-  borderRadius: 8,
-  transition: "transform 0.3s ease-in-out",
-  cursor: "pointer",
-  "&:hover": {
-    transform: "translateY(-5px)",
-    boxShadow: theme.shadows[4],
-  },
-}));
-
-const ProductCard = styled(Card)(({ theme }) => ({
-  height: "100%",
-  display: "flex",
-  flexDirection: "column",
-  transition: "transform 0.3s ease-in-out",
-  "&:hover": {
-    transform: "translateY(-5px)",
-    boxShadow: theme.shadows[4],
-  },
-}));
-
-const ProductImage = styled(CardMedia)(({ theme }) => ({
-  paddingTop: "100%", // 1:1 aspect ratio
-  backgroundColor: "#000",
-}));
 
 // Component for animated counter that only animates once
 const AnimatedCounter = ({ end, duration = 2000 }) => {
@@ -427,6 +400,128 @@ const HomePage = () => {
         </Grid>
       </Container>
 
+      {/* Featured Products Section */}
+      <Box sx={{ bgcolor: "background.default", py: 6, mb: 10, mt: 10 }}>
+        <Container>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 4,
+            }}
+          >
+            <Typography variant="h4" component="h2" fontWeight="bold">
+              أحدث المنتجات
+            </Typography>
+            <Button
+              endIcon={<ArrowBack />}
+              component={Link}
+              to="/products"
+              color="primary"
+            >
+              عرض الكل
+            </Button>
+          </Box>
+
+          {isLoadingProducts ? (
+            <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : isErrorProducts ? (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              حدث خطأ أثناء تحميل المنتجات:{" "}
+              {productsError?.message || "خطأ غير معروف"}
+            </Alert>
+          ) : latestProducts.length === 0 ? (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              لا توجد منتجات متاحة حالياً
+            </Alert>
+          ) : (
+            <Grid container spacing={3}>
+              {latestProducts.slice(0, 4).map((product) => (
+                <Grid item xs={12} sm={6} md={3} key={product.device_id}>
+                  <ProdectCard
+                    device={product}
+                    isMyProductsPage={false}
+                    isAuctionsPage={false}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </Container>
+      </Box>
+
+      {/* Auctions Section */}
+      <Container sx={{ mb: 10, mt: 10 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 4,
+          }}
+        >
+          <Typography variant="h4" component="h2" fontWeight="bold">
+            مزادات نشطة
+          </Typography>
+          <Button
+            endIcon={<ArrowBack />}
+            component={Link}
+            to="/auctions"
+            color="primary"
+          >
+            عرض الكل
+          </Button>
+        </Box>
+
+        {isLoadingAuctions ? (
+          <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : isErrorAuctions ? (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            حدث خطأ أثناء تحميل المنتجات:{" "}
+            {productsError?.message || "خطأ غير معروف"}
+          </Alert>
+        ) : latestAuctions.length === 0 ? (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            لا توجد مزادت متاحة حالياً
+          </Alert>
+        ) : (
+          <Grid container spacing={3}>
+            {latestAuctions.slice(0, 4).map((product) => (
+              <Grid item xs={12} sm={6} md={3} key={product.device_id}>
+                <ProdectCard
+                  device={product}
+                  isMyProductsPage={false}
+                  isAuctionsPage={true}
+                />
+              </Grid>
+            ))}
+          </Grid>
+        )}
+      </Container>
+
+      {/* Full Width Banner Image */}
+      {/* <Box sx={{ width: "100%", mt: 20, mb: 20 }}>
+        <img
+          src={banner}
+          alt="dubizzle OPEX"
+          style={{
+            width: { xs: "100%", md: "80%" },
+            objectFit: "cover",
+            maxWidth: "100%",
+            height: { xs: 200, md: 400 },
+            margin: "0 auto",
+            display: "block",
+          }}
+        />
+      </Box> */}
+
+      <BannerCarousel />
+
       {/* Statistics Section */}
       <Box
         sx={{ py: 8, bgcolor: "primary.main", color: "white", mt: 5, mb: 10 }}
@@ -583,110 +678,6 @@ const HomePage = () => {
         </Container>
       </Box>
 
-      {/* Featured Products Section */}
-      <Box sx={{ bgcolor: "background.default", py: 6, mb: 10, mt: 10 }}>
-        <Container>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 4,
-            }}
-          >
-            <Typography variant="h4" component="h2" fontWeight="bold">
-              أحدث المنتجات
-            </Typography>
-            <Button
-              endIcon={<ArrowBack />}
-              component={Link}
-              to="/products"
-              color="primary"
-            >
-              عرض الكل
-            </Button>
-          </Box>
-
-          {isLoadingProducts ? (
-            <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : isErrorProducts ? (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              حدث خطأ أثناء تحميل المنتجات:{" "}
-              {productsError?.message || "خطأ غير معروف"}
-            </Alert>
-          ) : latestProducts.length === 0 ? (
-            <Alert severity="info" sx={{ mb: 3 }}>
-              لا توجد منتجات متاحة حالياً
-            </Alert>
-          ) : (
-            <Grid container spacing={3}>
-              {latestProducts.slice(0, 4).map((product) => (
-                <Grid item xs={12} sm={6} md={3} key={product.device_id}>
-                  <ProdectCard
-                    device={product}
-                    isMyProductsPage={false}
-                    isAuctionsPage={false}
-                  />
-                </Grid>
-              ))}
-            </Grid>
-          )}
-        </Container>
-      </Box>
-
-      {/* Auctions Section */}
-      <Container sx={{ mb: 10, mt: 10 }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 4,
-          }}
-        >
-          <Typography variant="h4" component="h2" fontWeight="bold">
-            مزادات نشطة
-          </Typography>
-          <Button
-            endIcon={<ArrowBack />}
-            component={Link}
-            to="/auctions"
-            color="primary"
-          >
-            عرض الكل
-          </Button>
-        </Box>
-
-        {isLoadingAuctions ? (
-          <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : isErrorAuctions ? (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            حدث خطأ أثناء تحميل المنتجات:{" "}
-            {productsError?.message || "خطأ غير معروف"}
-          </Alert>
-        ) : latestAuctions.length === 0 ? (
-          <Alert severity="info" sx={{ mb: 3 }}>
-            لا توجد مزادت متاحة حالياً
-          </Alert>
-        ) : (
-          <Grid container spacing={3}>
-            {latestAuctions.slice(0, 4).map((product) => (
-              <Grid item xs={12} sm={6} md={3} key={product.device_id}>
-                <ProdectCard
-                  device={product}
-                  isMyProductsPage={false}
-                  isAuctionsPage={true}
-                />
-              </Grid>
-            ))}
-          </Grid>
-        )}
-      </Container>
-
       {/* How It Works Section */}
       <Box sx={{ bgcolor: "background.default", py: 8, mb: 10, mt: 10 }}>
         <Container>
@@ -826,22 +817,6 @@ const HomePage = () => {
             </Button>
           </Box>
         </Container>
-      </Box>
-
-      {/* Full Width Banner Image */}
-      <Box sx={{ width: "100%", mt: 4, mb: 4 }}>
-        <img
-          src={banner}
-          alt="dubizzle OPEX"
-          style={{
-            width: { xs: "100%", md: "80%" },
-            objectFit: "cover",
-            maxWidth: "100%",
-            height: { xs: 200, md: 400 },
-            margin: "0 auto",
-            display: "block",
-          }}
-        />
       </Box>
 
       {/* Testimonials Section */}

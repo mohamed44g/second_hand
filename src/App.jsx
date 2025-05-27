@@ -31,6 +31,7 @@ import DashboardPage from "./pages/admin/Dashboard.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
 import ContactPage from "./pages/ContactPage.jsx";
 import { ProtectedRoute } from "./pages/protectedPage.jsx";
+import Logout from "./pages/logout.jsx";
 
 // RTL setup for Arabic
 const cacheRtl = createCache({
@@ -119,6 +120,7 @@ function App() {
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/logout" element={<Logout />} />
             <Route path="/wallet" element={<WalletPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route

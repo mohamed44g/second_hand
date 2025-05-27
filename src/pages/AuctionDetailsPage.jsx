@@ -106,7 +106,6 @@ const AuctionDetailsPage = () => {
     enabled: !!id,
   });
 
-
   // تقديم مزايدة
   const placeBidMutation = useMutation({
     mutationFn: (bidData) => placeBid(bidData),
@@ -337,7 +336,6 @@ const AuctionDetailsPage = () => {
   const currentUserId = getUserID();
   const isWinner =
     auction?.winning_bid_id && auction.winning_bid_id === currentUserId;
-
   return (
     <Container maxWidth="lg" sx={{ py: 6 }}>
       <Box sx={{ mb: 4, display: "flex", alignItems: "center" }}>
@@ -745,109 +743,113 @@ const AuctionDetailsPage = () => {
                   </Box>
                 </Box>
 
-                <Divider sx={{ my: 2 }} />
-
-                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                  <AccessTime color="warning" sx={{ mr: 1 }} />
-                  <Typography variant="body2" color="text.secondary">
-                    {isAuctionActive(auction.auction_end_time)
-                      ? `ينتهي ${formatDistanceToNow(
-                          new Date(auction.auction_end_time),
-                          {
-                            locale: arEG,
-                            addSuffix: true,
-                          }
-                        )}`
-                      : "انتهى المزاد"}
-                  </Typography>
-                </Box>
-
-                {auction.bid_status === "cancled" ||
-                auction.bid_status === "ended" ||
-                !isAuctionActive(auction.auction_end_time) ? (
+                {auction.status === "accepted" && (
                   <>
-                    {auction.bid_status === "cancled" ? (
-                      <Alert severity="warning">تم الإلغاء</Alert>
-                    ) : auction.bid_status === "ended" ? (
-                      <Alert severity="info">تم الانتهاء</Alert>
-                    ) : (
-                      <Alert severity="info">
-                        انتهى هذا المزاد.{" "}
-                        {auction.winning_bid_id
-                          ? "تم تحديد الفائز."
-                          : "لم يتم تحديد فائز بعد."}
-                      </Alert>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {!isCurrentUserSeller && !hasCurrentUserBid() && (
-                      <Button
-                        variant="contained"
-                        fullWidth
-                        size="large"
-                        startIcon={<Gavel />}
-                        onClick={handleOpenBidDialog}
-                        sx={{ mb: 2 }}
-                        disabled={placeBidMutation.isPending}
-                      >
-                        {placeBidMutation.isPending ? (
-                          <CircularProgress size={24} color="inherit" />
-                        ) : (
-                          "المزايدة الآن"
-                        )}
-                      </Button>
-                    )}
+                    <Divider sx={{ my: 2 }} />
 
-                    {!isCurrentUserSeller && hasCurrentUserBid() && (
-                      <Button
-                        variant="outlined"
-                        fullWidth
-                        color="error"
-                        startIcon={<Cancel />}
-                        onClick={handleOpenCancelDialog}
-                        disabled={cancelBidMutation.isPending}
-                        sx={{ mb: 2 }}
-                      >
-                        {cancelBidMutation.isPending ? (
-                          <CircularProgress size={24} color="inherit" />
-                        ) : (
-                          "إلغاء المزايدة"
-                        )}
-                      </Button>
-                    )}
+                    <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                      <AccessTime color="warning" sx={{ mr: 1 }} />
+                      <Typography variant="body2" color="text.secondary">
+                        {isAuctionActive(auction.auction_end_time)
+                          ? `ينتهي ${formatDistanceToNow(
+                              new Date(auction.auction_end_time),
+                              {
+                                locale: arEG,
+                                addSuffix: true,
+                              }
+                            )}`
+                          : "انتهى المزاد"}
+                      </Typography>
+                    </Box>
 
-                    {isCurrentUserSeller && (
+                    {auction.bid_status === "cancled" ||
+                    auction.bid_status === "ended" ||
+                    !isAuctionActive(auction.auction_end_time) ? (
                       <>
-                        <Button
-                          variant="outlined"
-                          fullWidth
-                          color="primary"
-                          startIcon={<CheckCircle />}
-                          onClick={handleOpenFinalizeDialog}
-                          sx={{ mb: 2 }}
-                          disabled={finalizeAuctionMutation.isPending}
-                        >
-                          {finalizeAuctionMutation.isPending ? (
-                            <CircularProgress size={24} color="inherit" />
-                          ) : (
-                            "إنهاء المزاد"
-                          )}
-                        </Button>
-                        <Button
-                          variant="contained"
-                          fullWidth
-                          color="error"
-                          startIcon={<Cancel />}
-                          onClick={handleOpenCancelAuctionDialog}
-                          disabled={cancelAuctionMutation.isPending}
-                        >
-                          {cancelAuctionMutation.isPending ? (
-                            <CircularProgress size={24} color="inherit" />
-                          ) : (
-                            "إلغاء المزاد"
-                          )}
-                        </Button>
+                        {auction.bid_status === "cancled" ? (
+                          <Alert severity="warning">تم الإلغاء</Alert>
+                        ) : auction.bid_status === "ended" ? (
+                          <Alert severity="info">تم الانتهاء</Alert>
+                        ) : (
+                          <Alert severity="info">
+                            انتهى هذا المزاد.{" "}
+                            {auction.winning_bid_id
+                              ? "تم تحديد الفائز."
+                              : "لم يتم تحديد فائز بعد."}
+                          </Alert>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {!isCurrentUserSeller && !hasCurrentUserBid() && (
+                          <Button
+                            variant="contained"
+                            fullWidth
+                            size="large"
+                            startIcon={<Gavel />}
+                            onClick={handleOpenBidDialog}
+                            sx={{ mb: 2 }}
+                            disabled={placeBidMutation.isPending}
+                          >
+                            {placeBidMutation.isPending ? (
+                              <CircularProgress size={24} color="inherit" />
+                            ) : (
+                              "المزايدة الآن"
+                            )}
+                          </Button>
+                        )}
+
+                        {!isCurrentUserSeller && hasCurrentUserBid() && (
+                          <Button
+                            variant="outlined"
+                            fullWidth
+                            color="error"
+                            startIcon={<Cancel />}
+                            onClick={handleOpenCancelDialog}
+                            disabled={cancelBidMutation.isPending}
+                            sx={{ mb: 2 }}
+                          >
+                            {cancelBidMutation.isPending ? (
+                              <CircularProgress size={24} color="inherit" />
+                            ) : (
+                              "إلغاء المزايدة"
+                            )}
+                          </Button>
+                        )}
+
+                        {isCurrentUserSeller && (
+                          <>
+                            <Button
+                              variant="outlined"
+                              fullWidth
+                              color="primary"
+                              startIcon={<CheckCircle />}
+                              onClick={handleOpenFinalizeDialog}
+                              sx={{ mb: 2 }}
+                              disabled={finalizeAuctionMutation.isPending}
+                            >
+                              {finalizeAuctionMutation.isPending ? (
+                                <CircularProgress size={24} color="inherit" />
+                              ) : (
+                                "إنهاء المزاد"
+                              )}
+                            </Button>
+                            <Button
+                              variant="contained"
+                              fullWidth
+                              color="error"
+                              startIcon={<Cancel />}
+                              onClick={handleOpenCancelAuctionDialog}
+                              disabled={cancelAuctionMutation.isPending}
+                            >
+                              {cancelAuctionMutation.isPending ? (
+                                <CircularProgress size={24} color="inherit" />
+                              ) : (
+                                "إلغاء المزاد"
+                              )}
+                            </Button>
+                          </>
+                        )}
                       </>
                     )}
                   </>

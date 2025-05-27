@@ -15,9 +15,14 @@ export const ProtectedRoute = ({ roles, children }) => {
     const decodedToken = jwtDecode(token);
 
     // تحقق مما إذا كان دور المستخدم موجودًا في قائمة الأدوار المسموح بها
-    if (roles && !roles.includes(decodedToken.role)) {
-      toast.error("غير مسموح بالدخول لهذه الصفحة");
-      return <Navigate to="/" replace />; // أو أي صفحة افتراضية
+    if (roles) {
+      if (
+        (roles.includes("admin") && !decodedToken.is_admin) ||
+        (roles.includes("seller") && !decodedToken.is_seller)
+      ) {
+        toast.error("غير مسموح بالدخول لهذه الصفحة");
+        return <Navigate to="/" replace />; // أو أي صفحة افتراضية
+      }
     }
 
     // إذا كان كل شيء صحيحًا، اعرض الأطفال (children)

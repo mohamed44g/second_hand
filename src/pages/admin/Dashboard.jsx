@@ -65,6 +65,7 @@ const Dashboard = () => {
     total_sales: 0,
     total_revenue: 0,
     total_ads_revenue: 0,
+    total_fee: 0,
     total_products: 0,
     total_auctions: 0,
   });
@@ -145,6 +146,14 @@ const Dashboard = () => {
               title="إيرادات الإعلانات"
               value={`${stats.total_ads_revenue} ج.م`}
               color="warning"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4} lg={3}>
+            <StatCard
+              icon={<MoneyIcon sx={{ color: "success.main" }} />}
+              title="إجمالي الرسوم"
+              value={`${stats.total_fee} ج.م`}
+              color="success"
             />
           </Grid>
           <Grid item xs={12} sm={6} md={4} lg={3}>

@@ -40,6 +40,7 @@ import {
   PhotoCamera,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import {
   fetchUserData,
   updateUserPassword,
@@ -52,6 +53,7 @@ import toast from "react-hot-toast";
 
 const ProfilePage = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Fetch user data using useQuery
   const {
@@ -85,6 +87,7 @@ const ProfilePage = () => {
     last_name: userData.last_name || "",
     phone_number: userData.phone_number || "",
     address: userData.address || "",
+    is_seller: userData.is_seller || false,
   });
 
   // Update formData when userData changes
@@ -97,6 +100,7 @@ const ProfilePage = () => {
         last_name: userData.last_name || "",
         phone_number: userData.phone_number || "",
         address: userData.address || "",
+        is_seller: userData.is_seller || false,
       });
     }
   }, [userData]);
@@ -131,6 +135,31 @@ const ProfilePage = () => {
     },
   });
 
+  // Mutation for updating user role (seller status)
+  const updateRoleMutation = useMutation({
+    mutationFn: (roleData) => axiosInstance.patch("/users/role", roleData),
+    onSuccess: () => {
+      toast.success("تم التحديث بنجاح سجل دخول من جديد");
+      // Clear access token from localStorage
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("token");
+      // Navigate to login page after a short delay
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+    },
+    onError: (error) => {
+      toast.error(
+        error.response?.data?.message || "حدث خطأ أثناء تحديث حالة البائع"
+      );
+      // Reset the switch to its original state
+      setFormData((prev) => ({
+        ...prev,
+        is_seller: userData.is_seller,
+      }));
+    },
+  });
+
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
   };
@@ -160,10 +189,27 @@ const ProfilePage = () => {
   };
 
   const handleSwitchChange = (e) => {
-    setFormData({
-      ...formData,
-      is_seller: e.target.checked,
-    });
+    const newSellerStatus = e.target.checked;
+
+    // If user is currently a seller and trying to turn off seller status
+    if (userData.is_seller && !newSellerStatus) {
+      toast.error("لا يمكن تغيير الحالة من بائع لمشتري");
+      return; // Don't change the switch state
+    }
+
+    // If user is not a seller and trying to become a seller
+    if (!userData.is_seller && newSellerStatus) {
+      // Update the form state first
+      setFormData({
+        ...formData,
+        is_seller: newSellerStatus,
+      });
+
+      // Send request to update role
+      updateRoleMutation.mutate({
+        seller: true,
+      });
+    }
   };
 
   const handlePasswordDialogOpen = () => {
@@ -463,6 +509,15 @@ const ProfilePage = () => {
                             تمكين وضع البائع يسمح لك بعرض المنتجات للبيع وإنشاء
                             مزادات
                           </Typography>
+                          {userData.is_seller && (
+                            <Typography
+                              variant="caption"
+                              color="warning.main"
+                              sx={{ display: "block", mt: 1 }}
+                            >
+                              ملاحظة: لا يمكن تغيير الحالة من بائع إلى مشتري
+                            </Typography>
+                          )}
                         </Box>
                         <FormControlLabel
                           control={
@@ -470,12 +525,22 @@ const ProfilePage = () => {
                               checked={formData.is_seller}
                               onChange={handleSwitchChange}
                               color="primary"
-                              disabled={!editMode}
+                              disabled={updateRoleMutation.isPending}
                             />
                           }
                           label=""
                         />
                       </Box>
+                      {updateRoleMutation.isPending && (
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", mt: 2 }}
+                        >
+                          <CircularProgress size={20} sx={{ mr: 1 }} />
+                          <Typography variant="body2" color="text.secondary">
+                            جاري تحديث حالة البائع...
+                          </Typography>
+                        </Box>
+                      )}
                     </CardContent>
                   </Card>
                 </Box>

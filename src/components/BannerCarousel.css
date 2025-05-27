@@ -1,0 +1,12 @@
+.banner {
+  text-decoration: none;
+  margin-inline: auto;
+  width: 80%;
+  display: block;
+}
+
+@media screen and (max-width: 768px) {
+  .banner {
+    width: 98%;
+  }
+}

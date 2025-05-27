@@ -28,6 +28,7 @@ import {
   Cancel as CancelIcon,
   Info as InfoIcon,
 } from "@mui/icons-material";
+import { Link } from "react-router-dom";
 
 // دالة لجلب المنتجات المعلقة
 const fetchPendingProducts = async () => {
@@ -196,166 +197,185 @@ const QualityControlManagement = () => {
       )}
 
       <Grid container spacing={3}>
+        {console.log(data?.data)}
         {data?.data?.map((product) => (
           <Grid item xs={12} sm={6} md={4} lg={3} key={product.device_id}>
-            <Card
-              sx={{ height: "100%", display: "flex", flexDirection: "column" }}
+            <Link
+              to={
+                product.is_auction
+                  ? `/auction/${product.bid_id}`
+                  : `/product/${product.device_id}`
+              }
+              style={{ textDecoration: "none", color: "inherit" }}
             >
-              <CardMedia
-                component="img"
-                height="200"
-                image={
-                  product.image_url
-                    ? `${axiosInstance.defaults.baseURL}/${product.image_url}`
-                    : "/placeholder.svg?height=200&width=300"
-                }
-                alt={product.name}
-                sx={{ objectFit: "cover" }}
-              />
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Typography variant="h6" gutterBottom noWrap>
-                  {product.name}
-                </Typography>
-
-                <Box
-                  sx={{ mb: 1, display: "flex", alignItems: "center", gap: 1 }}
-                >
-                  <Chip
-                    size="small"
-                    label={product.main_category_name}
-                    color="primary"
-                    variant="outlined"
-                  />
-                  <Chip
-                    size="small"
-                    label={product.subcategory_name}
-                    color="secondary"
-                    variant="outlined"
-                  />
-                </Box>
-
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mb: 1 }}
-                >
-                  {product.description.length > 60
-                    ? `${product.description.substring(0, 60)}...`
-                    : product.description}
-                </Typography>
-
-                <Divider sx={{ my: 1 }} />
-
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    mb: 1,
-                  }}
-                >
-                  <Typography variant="body2">
-                    <strong>السعر:</strong>
+              <Card
+                sx={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <CardMedia
+                  component="img"
+                  height="200"
+                  image={
+                    product.image_url
+                      ? `${axiosInstance.defaults.baseURL}/${product.image_url}`
+                      : "/placeholder.svg?height=200&width=300"
+                  }
+                  alt={product.name}
+                  sx={{ objectFit: "cover" }}
+                />
+                <CardContent sx={{ flexGrow: 1 }}>
+                  <Typography variant="h6" gutterBottom noWrap>
+                    {product.name}
                   </Typography>
+
+                  <Box
+                    sx={{
+                      mb: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                    }}
+                  >
+                    <Chip
+                      size="small"
+                      label={product.main_category_name}
+                      color="primary"
+                      variant="outlined"
+                    />
+                    <Chip
+                      size="small"
+                      label={product.subcategory_name}
+                      color="secondary"
+                      variant="outlined"
+                    />
+                  </Box>
+
                   <Typography
                     variant="body2"
-                    color="primary.main"
-                    fontWeight="bold"
+                    color="text.secondary"
+                    sx={{ mb: 1 }}
                   >
-                    {product.current_price} ج.م
+                    {product.description.length > 60
+                      ? `${product.description.substring(0, 60)}...`
+                      : product.description}
                   </Typography>
-                </Box>
 
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    mb: 1,
-                  }}
-                >
-                  <Typography variant="body2">
-                    <strong>الحالة:</strong>
-                  </Typography>
-                  <Typography variant="body2">{product.condition}</Typography>
-                </Box>
+                  <Divider sx={{ my: 1 }} />
 
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    mb: 1,
-                  }}
-                >
-                  <Typography variant="body2">
-                    <strong>سنة الصنع:</strong>
-                  </Typography>
-                  <Typography variant="body2">
-                    {product.manufacturing_year}
-                  </Typography>
-                </Box>
-
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    mb: 1,
-                  }}
-                >
-                  <Typography variant="body2">
-                    <strong>البائع:</strong>
-                  </Typography>
-                  <Typography variant="body2">
-                    {product.seller_username}
-                  </Typography>
-                </Box>
-
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    mb: 1,
-                  }}
-                >
-                  <Typography variant="body2">
-                    <strong>نوع البيع:</strong>
-                  </Typography>
-                  <Chip
-                    size="small"
-                    label={product.is_auction ? "مزاد" : "بيع مباشر"}
-                    color={product.is_auction ? "warning" : "info"}
-                    variant="outlined"
-                  />
-                </Box>
-              </CardContent>
-
-              <Box sx={{ p: 2, pt: 0, mt: "auto" }}>
-                <Grid container spacing={1}>
-                  <Grid item xs={6}>
-                    <Button
-                      variant="contained"
-                      color="success"
-                      fullWidth
-                      startIcon={<CheckCircleIcon />}
-                      onClick={() => handleAcceptProduct(product.device_id)}
-                      disabled={updateStatusMutation.isLoading}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      mb: 1,
+                    }}
+                  >
+                    <Typography variant="body2">
+                      <strong>السعر:</strong>
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color="primary.main"
+                      fontWeight="bold"
                     >
-                      قبول
-                    </Button>
+                      {product.current_price} ج.م
+                    </Typography>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      mb: 1,
+                    }}
+                  >
+                    <Typography variant="body2">
+                      <strong>الحالة:</strong>
+                    </Typography>
+                    <Typography variant="body2">{product.condition}</Typography>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      mb: 1,
+                    }}
+                  >
+                    <Typography variant="body2">
+                      <strong>سنة الصنع:</strong>
+                    </Typography>
+                    <Typography variant="body2">
+                      {product.manufacturing_year}
+                    </Typography>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      mb: 1,
+                    }}
+                  >
+                    <Typography variant="body2">
+                      <strong>البائع:</strong>
+                    </Typography>
+                    <Typography variant="body2">
+                      {product.seller_username}
+                    </Typography>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      mb: 1,
+                    }}
+                  >
+                    <Typography variant="body2">
+                      <strong>نوع البيع:</strong>
+                    </Typography>
+                    <Chip
+                      size="small"
+                      label={product.is_auction ? "مزاد" : "بيع مباشر"}
+                      color={product.is_auction ? "warning" : "info"}
+                      variant="outlined"
+                    />
+                  </Box>
+                </CardContent>
+
+                <Box sx={{ p: 2, pt: 0, mt: "auto" }}>
+                  <Grid container spacing={1}>
+                    <Grid item xs={6}>
+                      <Button
+                        variant="contained"
+                        color="success"
+                        fullWidth
+                        startIcon={<CheckCircleIcon />}
+                        onClick={() => handleAcceptProduct(product.device_id)}
+                        disabled={updateStatusMutation.isLoading}
+                      >
+                        قبول
+                      </Button>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Button
+                        variant="contained"
+                        color="error"
+                        fullWidth
+                        startIcon={<CancelIcon />}
+                        onClick={() => handleRejectProduct(product.device_id)}
+                        disabled={updateStatusMutation.isLoading}
+                      >
+                        رفض
+                      </Button>
+                    </Grid>
                   </Grid>
-                  <Grid item xs={6}>
-                    <Button
-                      variant="contained"
-                      color="error"
-                      fullWidth
-                      startIcon={<CancelIcon />}
-                      onClick={() => handleRejectProduct(product.device_id)}
-                      disabled={updateStatusMutation.isLoading}
-                    >
-                      رفض
-                    </Button>
-                  </Grid>
-                </Grid>
-              </Box>
-            </Card>
+                </Box>
+              </Card>
+            </Link>
           </Grid>
         ))}
       </Grid>
