@@ -43,6 +43,7 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import ProductCard from "../components/ProductCard";
 import EdidProductForm from "../components/Products/EditProductForm";
+import toast from "react-hot-toast";
 
 const MyProductsPage = () => {
   const [openDialog, setOpenDialog] = useState(false);
@@ -83,10 +84,10 @@ const MyProductsPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userProducts"] });
       handleClosePromoteDialog();
-      alert("تم إنشاء الإعلان المدفوع بنجاح!");
+      toast.success("تم إنشاء الإعلان المدفوع بنجاح!");
     },
     onError: (error) => {
-      alert(`حدث خطأ أثناء إنشاء الإعلان: ${error.message}`);
+      toast.error(`حدث خطأ أثناء إنشاء الإعلان: ${error.message}`);
     },
   });
 
@@ -177,6 +178,8 @@ const MyProductsPage = () => {
     if (tabValue === 2) return product.is_auction; // Auctions
     return true;
   });
+
+
 
   return (
     <Container maxWidth="lg" sx={{ py: 6 }}>

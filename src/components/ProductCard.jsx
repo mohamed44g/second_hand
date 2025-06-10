@@ -116,9 +116,11 @@ const ProductCardComponent = ({
       case "pending":
         return { label: "بانتظار الموافقة", color: "warning" };
       case "accepted":
-        return { label: "تم الموافقة", color: "success" };
+        return { label: "متاح", color: "success" };
       case "rejected":
         return { label: "تم الرفض", color: "error" };
+      case "sold":
+        return { label: "تم البيع", color: "info" };
       default:
         return { label: "", color: "default" };
     }
@@ -149,8 +151,8 @@ const ProductCardComponent = ({
         />
       )}
 
-      {/* Product Status Badge (pending/accepted/rejected) */}
-      {isMyProductsPage && device.status && (
+      {/* Product Status Badge (pending/accepted/rejected/sold) */}
+      {device.status && (
         <Chip
           label={statusBadge.label}
           color={statusBadge.color}

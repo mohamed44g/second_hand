@@ -46,10 +46,12 @@ import {
   updateUserPassword,
   updateUserData,
 } from "../api/userApi";
+import { deleteUser } from "../api/adminApi"; // استيراد دالة deleteUser
 import UserReportsTab from "../components/Reports/UserReportsTab";
 import axiosInstance from "../api/axiosInstance";
 import { user } from "../data/fakedata";
 import toast from "react-hot-toast";
+import { getUserID } from "../utils/checkUser";
 
 const ProfilePage = () => {
   const queryClient = useQueryClient();
@@ -68,11 +70,12 @@ const ProfilePage = () => {
 
   const userData = userResponse?.data || user;
 
-  // State for tabs, edit mode, and password dialog
+  // State for tabs, edit mode, password dialog, and delete dialog
   const [tabValue, setTabValue] = useState(0);
   const [editMode, setEditMode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [openPasswordDialog, setOpenPasswordDialog] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false); // حالة نافذة تأكيد الحذف
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -126,7 +129,7 @@ const ProfilePage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userData"] });
       setEditMode(false);
-      toast.success("تم تحديث بياناتك المستخدم بنجاح!");
+      toast.success("تم تحديث بيانات المستخدم بنجاح!");
     },
     onError: (error) => {
       toast.error(
@@ -140,10 +143,8 @@ const ProfilePage = () => {
     mutationFn: (roleData) => axiosInstance.patch("/users/role", roleData),
     onSuccess: () => {
       toast.success("تم التحديث بنجاح سجل دخول من جديد");
-      // Clear access token from localStorage
       localStorage.removeItem("accessToken");
       localStorage.removeItem("token");
-      // Navigate to login page after a short delay
       setTimeout(() => {
         navigate("/login");
       }, 2000);
@@ -152,11 +153,25 @@ const ProfilePage = () => {
       toast.error(
         error.response?.data?.message || "حدث خطأ أثناء تحديث حالة البائع"
       );
-      // Reset the switch to its original state
       setFormData((prev) => ({
         ...prev,
         is_seller: userData.is_seller,
       }));
+    },
+  });
+
+  // Mutation for deleting user account
+  const deleteUserMutation = useMutation({
+    mutationFn: (userId) => deleteUser(userId), // تمرير user_id
+    onSuccess: () => {
+      toast.success("تم حذف الحساب بنجاح!");
+      localStorage.removeItem("accessToken"); // حذف accessToken
+      setTimeout(() => {
+        navigate("/login"); // إعادة توجيه إلى صفحة تسجيل الدخول
+      }, 2000);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "حدث خطأ أثناء حذف الحساب");
     },
   });
 
@@ -166,7 +181,6 @@ const ProfilePage = () => {
 
   const handleEditToggle = () => {
     if (editMode) {
-      // Save changes using PATCH /users
       userDataMutation.mutate({
         username: formData.username,
         email: formData.email,
@@ -191,21 +205,16 @@ const ProfilePage = () => {
   const handleSwitchChange = (e) => {
     const newSellerStatus = e.target.checked;
 
-    // If user is currently a seller and trying to turn off seller status
     if (userData.is_seller && !newSellerStatus) {
       toast.error("لا يمكن تغيير الحالة من بائع لمشتري");
-      return; // Don't change the switch state
+      return;
     }
 
-    // If user is not a seller and trying to become a seller
     if (!userData.is_seller && newSellerStatus) {
-      // Update the form state first
       setFormData({
         ...formData,
         is_seller: newSellerStatus,
       });
-
-      // Send request to update role
       updateRoleMutation.mutate({
         seller: true,
       });
@@ -235,11 +244,25 @@ const ProfilePage = () => {
       return;
     }
 
-    // Update password using PATCH /users/password
     passwordMutation.mutate({
       currentPassword,
       newPassword,
     });
+  };
+
+  // وظائف نافذة تأكيد الحذف
+  const handleDeleteDialogOpen = () => {
+    setOpenDeleteDialog(true);
+  };
+
+  const handleDeleteDialogClose = () => {
+    setOpenDeleteDialog(false);
+  };
+
+  const handleDeleteAccount = () => {
+    const userId = getUserID();
+    deleteUserMutation.mutate(userId);
+    setOpenDeleteDialog(false);
   };
 
   if (isLoading) {
@@ -516,6 +539,7 @@ const ProfilePage = () => {
                               sx={{ display: "block", mt: 1 }}
                             >
                               ملاحظة: لا يمكن تغيير الحالة من بائع إلى مشتري
+                              يمكنك الشراء اثناء استخدامك وضع البائع
                             </Typography>
                           )}
                         </Box>
@@ -610,8 +634,15 @@ const ProfilePage = () => {
                             حذف حسابك بشكل نهائي من المنصة
                           </Typography>
                         </Box>
-                        <Button variant="outlined" color="error">
-                          حذف الحساب
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          onClick={handleDeleteDialogOpen}
+                          disabled={deleteUserMutation.isPending}
+                        >
+                          {deleteUserMutation.isPending
+                            ? "جاري الحذف..."
+                            : "حذف الحساب"}
                         </Button>
                       </Box>
                       <Alert severity="warning">
@@ -717,6 +748,28 @@ const ProfilePage = () => {
             {passwordMutation.isPending
               ? "جاري التغيير..."
               : "تغيير كلمة المرور"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Account Confirmation Dialog */}
+      <Dialog open={openDeleteDialog} onClose={handleDeleteDialogClose}>
+        <DialogTitle>تأكيد حذف الحساب</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            هل أنت متأكد من أنك تريد حذف حسابك؟ هذا الإجراء لا يمكن التراجع عنه
+            وسيؤدي إلى فقدان جميع بياناتك ومعاملاتك بشكل نهائي.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteDialogClose}>إلغاء</Button>
+          <Button
+            onClick={handleDeleteAccount}
+            variant="contained"
+            color="error"
+            disabled={deleteUserMutation.isPending}
+          >
+            {deleteUserMutation.isPending ? "جاري الحذف..." : "حذف الحساب"}
           </Button>
         </DialogActions>
       </Dialog>

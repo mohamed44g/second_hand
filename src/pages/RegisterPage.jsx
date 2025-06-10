@@ -50,10 +50,23 @@ const egyptianGovernorates = [
   "مرسى مطروح",
 ];
 
+// قائمة أكواد الدول
+const countryCodes = [
+  { code: "+20", country: "مصر" },
+  { code: "+966", country: "السعودية" },
+  { code: "+971", country: "الإمارات" },
+  { code: "+965", country: "الكويت" },
+  { code: "+974", country: "قطر" },
+];
+
 const steps = ["المعلومات الشخصية", "معلومات الحساب", "التحقق"];
 
 // Regex لتأكيد كلمة المرور (8 أحرف على الأقل، حرف صغير، كبير، رقم، ورمز خاص)
-const passwordRegex = /^(?=.[a-z])(?=.[A-Z])(?=.\d)(?=.[\W_]).{8,}$/;
+const passwordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+
+// Regex للتحقق من رقم الهاتف (10 أرقام لمصر، يمكن تخصيصه لدول أخرى)
+const phoneNumberRegex = /^\d{10}$/;
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -64,6 +77,7 @@ const RegisterPage = () => {
     password: "",
     first_name: "",
     last_name: "",
+    country_code: "+20", // القيمة الافتراضية لمصر
     phone_number: "",
     governorate: "",
     address_detail: "",
@@ -91,6 +105,12 @@ const RegisterPage = () => {
       : "";
   };
 
+  // دمج رمز الدولة ورقم الهاتف
+  const getCombinedPhoneNumber = () => {
+    const { country_code, phone_number } = formData;
+    return country_code && phone_number ? `${country_code}${phone_number}` : "";
+  };
+
   // useMutation لإرسال طلب توليد كود التحقق
   const generateCodeMutation = useMutation({
     mutationFn: (email) => axiosInstance.post("/users/verification", { email }),
@@ -109,13 +129,14 @@ const RegisterPage = () => {
   const registerMutation = useMutation({
     mutationFn: (data) => {
       const combinedAddress = getCombinedAddress();
+      const combinedPhoneNumber = getCombinedPhoneNumber();
       const formDataToSend = new FormData();
       formDataToSend.append("username", data.username);
       formDataToSend.append("email", data.email);
       formDataToSend.append("password", data.password);
       formDataToSend.append("first_name", data.first_name);
       formDataToSend.append("last_name", data.last_name);
-      formDataToSend.append("phone_number", data.phone_number);
+      formDataToSend.append("phone_number", combinedPhoneNumber);
       formDataToSend.append("address", combinedAddress);
       formDataToSend.append("national_id", data.national_id);
       formDataToSend.append("is_seller", data.is_seller);
@@ -146,9 +167,15 @@ const RegisterPage = () => {
       if (
         !formData.first_name ||
         !formData.last_name ||
+        !formData.country_code ||
         !formData.phone_number
       ) {
         toast.error("يرجى ملء جميع الحقول المطلوبة");
+        return;
+      }
+      // التحقق من رقم الهاتف
+      if (!phoneNumberRegex.test(formData.phone_number)) {
+        toast.error("رقم الهاتف يجب أن يتكون من 10 أرقام");
         return;
       }
       setActiveStep((prev) => prev + 1);
@@ -209,7 +236,26 @@ const RegisterPage = () => {
                 required
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth required>
+                <Select
+                  name="country_code"
+                  value={formData.country_code}
+                  onChange={handleChange}
+                  displayEmpty
+                  renderValue={(selected) =>
+                    selected ? selected : "رمز الدولة"
+                  }
+                >
+                  {countryCodes.map(({ code, country }) => (
+                    <MenuItem key={code} value={code}>
+                      {`${country} (${code})`}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={8}>
               <TextField
                 fullWidth
                 label="رقم الهاتف"
@@ -217,6 +263,16 @@ const RegisterPage = () => {
                 value={formData.phone_number}
                 onChange={handleChange}
                 required
+                error={
+                  !phoneNumberRegex.test(formData.phone_number) &&
+                  formData.phone_number !== ""
+                }
+                helperText={
+                  !phoneNumberRegex.test(formData.phone_number) &&
+                  formData.phone_number !== ""
+                    ? "رقم الهاتف يجب أن يتكون من 10 أرقام"
+                    : ""
+                }
               />
             </Grid>
             <Grid item xs={12}>
@@ -225,7 +281,7 @@ const RegisterPage = () => {
                 <RadioGroup
                   row
                   name="account_type"
-                  value={formData.is_seller ? "seller" : "buyer"}
+                  value={formData.is_seller ? "sold" : "buyer"}
                   onChange={handleAccountTypeChange}
                 >
                   <FormControlLabel

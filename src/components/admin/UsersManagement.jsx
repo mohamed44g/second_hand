@@ -32,7 +32,6 @@ import {
   AdminPanelSettings,
 } from "@mui/icons-material";
 import axiosInstance from "../../api/axiosInstance";
-import { users as usersData } from "../../data/fakedata";
 
 const UsersManagement = () => {
   const [page, setPage] = useState(0);
@@ -47,7 +46,7 @@ const UsersManagement = () => {
   });
 
   // استخدام البيانات الحقيقية
-  const [users, setUsers] = useState(usersData);
+  const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -103,7 +102,7 @@ const UsersManagement = () => {
       try {
         setIsLoading(true);
         const response = await axiosInstance.delete(
-          `/admin/users/${selectedUser.user_id}`
+          `/users/${selectedUser.user_id}`
         );
         if (response.data.status === "success") {
           setUsers(

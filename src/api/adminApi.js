@@ -8,7 +8,7 @@ export const fetchAllUsers = async () => {
 
 // حذف مستخدم
 export const deleteUser = async (userId) => {
-  const response = await axiosInstance.delete(`/admin/users/${userId}`);
+  const response = await axiosInstance.delete(`/users/${userId}`);
   return response.data;
 };
 

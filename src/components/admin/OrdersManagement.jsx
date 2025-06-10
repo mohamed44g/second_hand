@@ -29,8 +29,10 @@ import {
   Search as SearchIcon,
   LocalShipping as ShippingIcon,
   CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
 } from "@mui/icons-material";
 import axiosInstance from "../../api/axiosInstance";
+import { cancelOrder } from "../../api/orderApi";
 
 // تعريف ألوان حالات الطلبات
 const statusColors = {
@@ -46,6 +48,7 @@ const statusTranslations = {
   shipped: "تم الشحن",
   delivered: "تم التوصيل",
   cancelled: "ملغي",
+  cancel: "إلغاء الطلب",
 };
 
 const OrdersManagement = () => {
@@ -57,9 +60,9 @@ const OrdersManagement = () => {
     message: "",
     severity: "success",
   });
-  const [anchorEl, setAnchorEl] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+  const [actionType, setActionType] = useState(null); // status_change أو cancel
   const [newStatus, setNewStatus] = useState(null);
 
   // استخدام البيانات الحقيقية
@@ -108,17 +111,9 @@ const OrdersManagement = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  const handleMenuOpen = (event, order) => {
-    setAnchorEl(event.currentTarget);
+  const handleOpenConfirmDialog = (order, action, status = null) => {
     setSelectedOrder(order);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleOpenConfirmDialog = (order, status) => {
-    setSelectedOrder(order);
+    setActionType(action);
     setNewStatus(status);
     setOpenConfirmDialog(true);
   };
@@ -126,30 +121,27 @@ const OrdersManagement = () => {
   const handleCloseConfirmDialog = () => {
     setOpenConfirmDialog(false);
     setSelectedOrder(null);
+    setActionType(null);
     setNewStatus(null);
   };
 
   const handleStatusChange = async () => {
-    if (!selectedOrder || !newStatus) return;
+    if (!selectedOrder || !newStatus || actionType !== "status_change") return;
 
     try {
       setIsLoading(true);
       const response = await axiosInstance.patch(
         `/admin/orders/${selectedOrder.order_id}`,
-        {
-          status: newStatus,
-        }
+        { status: newStatus }
       );
 
       if (response.data.status === "success") {
-        // تحديث حالة الطلب في القائمة
         setOrders(
-          orders.map((order) => {
-            if (order.order_id === selectedOrder.order_id) {
-              return { ...order, status: newStatus };
-            }
-            return order;
-          })
+          orders.map((order) =>
+            order.order_id === selectedOrder.order_id
+              ? { ...order, status: newStatus }
+              : order
+          )
         );
 
         setSnackbar({
@@ -177,6 +169,54 @@ const OrdersManagement = () => {
     }
   };
 
+  const handleCancelOrder = async () => {
+    if (!selectedOrder || actionType !== "cancel") return;
+
+    try {
+      setIsLoading(true);
+      const response = await cancelOrder(selectedOrder.order_id);
+
+      if (response.data.status === "success") {
+        setOrders(
+          orders.map((order) =>
+            order.order_id === selectedOrder.order_id
+              ? { ...order, status: "cancelled" }
+              : order
+          )
+        );
+
+        setSnackbar({
+          open: true,
+          message: `تم إلغاء الطلب رقم ${selectedOrder.order_id} بنجاح`,
+          severity: "success",
+        });
+      } else {
+        setSnackbar({
+          open: true,
+          message: "فشل في إلغاء الطلب",
+          severity: "error",
+        });
+      }
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || "حدث خطأ أثناء إلغاء الطلب",
+        severity: "error",
+      });
+    } finally {
+      setIsLoading(false);
+      handleCloseConfirmDialog();
+    }
+  };
+
+  const handleConfirmAction = () => {
+    if (actionType === "status_change") {
+      handleStatusChange();
+    } else if (actionType === "cancel") {
+      handleCancelOrder();
+    }
+  };
+
   // تصفية الطلبات حسب البحث
   const filteredOrders = orders.filter(
     (order) =>
@@ -196,7 +236,7 @@ const OrdersManagement = () => {
   );
 
   return (
-    <Box>
+    <Box sx={{ p: 4 }}>
       <Box
         sx={{
           display: "flex",
@@ -295,7 +335,11 @@ const OrdersManagement = () => {
                               size="small"
                               startIcon={<CheckCircleIcon />}
                               onClick={() =>
-                                handleOpenConfirmDialog(order, "delivered")
+                                handleOpenConfirmDialog(
+                                  order,
+                                  "status_change",
+                                  "delivered"
+                                )
                               }
                               color="success"
                             >
@@ -308,7 +352,11 @@ const OrdersManagement = () => {
                                 size="small"
                                 startIcon={<ShippingIcon />}
                                 onClick={() =>
-                                  handleOpenConfirmDialog(order, "shipped")
+                                  handleOpenConfirmDialog(
+                                    order,
+                                    "status_change",
+                                    "shipped"
+                                  )
                                 }
                                 color="info"
                               >
@@ -319,13 +367,30 @@ const OrdersManagement = () => {
                                 size="small"
                                 startIcon={<CheckCircleIcon />}
                                 onClick={() =>
-                                  handleOpenConfirmDialog(order, "delivered")
+                                  handleOpenConfirmDialog(
+                                    order,
+                                    "status_change",
+                                    "delivered"
+                                  )
                                 }
                                 color="success"
                               >
                                 تم التسليم
                               </Button>
                             </>
+                          )}
+                          {order.status !== "delivered" && (
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              startIcon={<CancelIcon />}
+                              onClick={() =>
+                                handleOpenConfirmDialog(order, "cancel")
+                              }
+                              color="error"
+                            >
+                              إلغاء الطلب
+                            </Button>
                           )}
                         </Box>
                       </TableCell>
@@ -350,27 +415,32 @@ const OrdersManagement = () => {
         </Paper>
       )}
 
-      {/* Modal لتأكيد تغيير الحالة */}
+      {/* Modal لتأكيد الإجراء */}
       <Dialog open={openConfirmDialog} onClose={handleCloseConfirmDialog}>
-        <DialogTitle>تأكيد تغيير حالة الطلب</DialogTitle>
+        <DialogTitle>
+          {actionType === "cancel"
+            ? "تأكيد إلغاء الطلب"
+            : "تأكيد تغيير حالة الطلب"}
+        </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            هل أنت متأكد من تغيير الحالة إلى {statusTranslations[newStatus]}؟
-            هذا الإجراء لا يمكن التراجع عنه.
-            {newStatus === "delivered" && (
-              <Typography variant="body1" color="text.secondary" mt={2}>
-                * سيتم تحويل مبلغ الشراء الى البائع بعد تأكيد التسليم.
-              </Typography>
-            )}
+            {actionType === "cancel"
+              ? `هل أنت متأكد من إلغاء الطلب رقم ${selectedOrder?.order_id}؟ سيتم إرجاع المبلغ إلى محفظة المشتري وإعادة الأجهزة إلى حالة "متاح". هذا الإجراء لا يمكن التراجع عنه.`
+              : `هل أنت متأكد من تغيير الحالة إلى ${statusTranslations[newStatus]}؟ هذا الإجراء لا يمكن التراجع عنه.`}
           </DialogContentText>
+          {actionType === "status_change" && newStatus === "delivered" && (
+            <Typography variant="body2" color="text.secondary" mt={2}>
+              * سيتم تحويل مبلغ الشراء إلى البائع بعد تأكيد التسليم.
+            </Typography>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseConfirmDialog} color="primary">
             إلغاء
           </Button>
           <Button
-            onClick={handleStatusChange}
-            color="primary"
+            onClick={handleConfirmAction}
+            color={actionType === "cancel" ? "error" : "primary"}
             variant="contained"
             disabled={isLoading}
           >
