@@ -52,19 +52,34 @@ const Footer = () => {
             <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
               روابط سريعة
             </Typography>
-            <Link href="#" color="inherit" display="block" sx={{ mb: 1 }}>
+            <Link href="/" color="inherit" display="block" sx={{ mb: 1 }}>
               الرئيسية
             </Link>
-            <Link href="#" color="inherit" display="block" sx={{ mb: 1 }}>
+            <Link
+              href="/products"
+              color="inherit"
+              display="block"
+              sx={{ mb: 1 }}
+            >
               المنتجات
             </Link>
-            <Link href="#" color="inherit" display="block" sx={{ mb: 1 }}>
+            <Link
+              href="/auctions"
+              color="inherit"
+              display="block"
+              sx={{ mb: 1 }}
+            >
               المزادات
             </Link>
-            <Link href="#" color="inherit" display="block" sx={{ mb: 1 }}>
+            <Link href="/about" color="inherit" display="block" sx={{ mb: 1 }}>
               من نحن
             </Link>
-            <Link href="#" color="inherit" display="block" sx={{ mb: 1 }}>
+            <Link
+              href="/contact"
+              color="inherit"
+              display="block"
+              sx={{ mb: 1 }}
+            >
               اتصل بنا
             </Link>
           </Grid>

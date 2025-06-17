@@ -32,6 +32,8 @@ import AboutPage from "./pages/AboutPage.jsx";
 import ContactPage from "./pages/ContactPage.jsx";
 import { ProtectedRoute } from "./pages/protectedPage.jsx";
 import Logout from "./pages/logout.jsx";
+import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
+import ChangePasswordPage from "./pages/ChangePasswordPage.jsx";
 
 // RTL setup for Arabic
 const cacheRtl = createCache({
@@ -151,6 +153,8 @@ function App() {
               }
             />
             <Route path="/seller/:id" element={<SellerProfilePage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/change-password" element={<ChangePasswordPage />} />
           </Routes>
           <Footer />
         </Router>

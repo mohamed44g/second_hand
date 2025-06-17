@@ -2,12 +2,12 @@
 import React, { useState } from "react";
 import { Box, Button, TextField, Typography, Grid, Link } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
-import { Link as RouterLink, useNavigate } from "react-router-dom"; // استيراد Link و useNavigate
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import axiosInstance from "../api/axiosInstance";
 import toast from "react-hot-toast";
 
 const LoginPage = () => {
-  const navigate = useNavigate(); // للتوجيه بعد تسجيل الدخول
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -18,16 +18,13 @@ const LoginPage = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  // useMutation لإرسال بيانات تسجيل الدخول
   const loginMutation = useMutation({
     mutationFn: (data) => axiosInstance.post("/users/login", data),
     onSuccess: (response) => {
       toast.success(response.data.message);
-      // تخزين الـ Access Token (ممكن تستخدمه لاحقًا للمصادقة)
       localStorage.setItem("accessToken", response.data.data.AccessToken);
-      // التوجيه لصفحة رئيسية (ممكن تغيرها لصفحة تانية)
       setTimeout(() => {
-        navigate("/"); // افترضنا إن فيه صفحة dashboard
+        navigate("/");
       }, 2000);
     },
     onError: (err) => {
@@ -81,6 +78,7 @@ const LoginPage = () => {
             تسجيل الدخول
           </Button>
         </Grid>
+
         <Grid item xs={12} sx={{ textAlign: "center" }}>
           <Typography>
             ليس لديك حساب؟{" "}
@@ -88,6 +86,12 @@ const LoginPage = () => {
               سجل الآن
             </Link>
           </Typography>
+        </Grid>
+
+        <Grid item xs={12} sx={{ textAlign: "center" }}>
+          <Link component={RouterLink} to="/reset-password">
+            هل نسيت كلمة السر؟
+          </Link>
         </Grid>
       </Grid>
     </Box>

@@ -54,7 +54,6 @@ const HeroSection = styled(Box)(({ theme }) => ({
   position: "relative",
 }));
 
-
 // Component for animated counter that only animates once
 const AnimatedCounter = ({ end, duration = 2000 }) => {
   const [count, setCount] = useState(0);
@@ -504,22 +503,6 @@ const HomePage = () => {
         )}
       </Container>
 
-      {/* Full Width Banner Image */}
-      {/* <Box sx={{ width: "100%", mt: 20, mb: 20 }}>
-        <img
-          src={banner}
-          alt="dubizzle OPEX"
-          style={{
-            width: { xs: "100%", md: "80%" },
-            objectFit: "cover",
-            maxWidth: "100%",
-            height: { xs: 200, md: 400 },
-            margin: "0 auto",
-            display: "block",
-          }}
-        />
-      </Box> */}
-
       <BannerCarousel />
 
       {/* Statistics Section */}
@@ -847,9 +830,8 @@ const HomePage = () => {
                 <Rating value={5} readOnly />
               </Box>
               <Typography variant="body1" paragraph>
-                "تجربة رائعة في بيع هاتفي القديم. عملية سهلة وسريعة، وحصلت على
-                سعر أفضل مما توقعت. أنصح بشدة بهذا الموقع لأي شخص يرغب في بيع
-                أجهزته المستعملة."
+                "أول مرة أجرب الموقع وكنت خايف، بس بجد طلعوا محترمين. جبت موبايل
+                وسعره كان حلو، والجودة كويسة أوي."
               </Typography>
               <Box sx={{ display: "flex", alignItems: "center", mt: 2 }}>
                 <Box
@@ -874,7 +856,7 @@ const HomePage = () => {
                     أحمد محمد
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    بائع
+                    مشترى
                   </Typography>
                 </Box>
               </Box>
@@ -886,9 +868,8 @@ const HomePage = () => {
                 <Rating value={4.5} precision={0.5} readOnly />
               </Box>
               <Typography variant="body1" paragraph>
-                "اشتريت لابتوب مستعمل بحالة ممتازة وبسعر مناسب جداً. الموقع سهل
-                الاستخدام والتواصل مع البائع كان سلس. سأستخدم الموقع مرة أخرى
-                بالتأكيد."
+                "بعت لاب توب قديم كنت مش محتاجه، والموقع خلّى العملية زي الفل.
+                حصلت على فلوس أحسن مما كنت متوقع. يستاهلوا الصراحة."
               </Typography>
               <Box sx={{ display: "flex", alignItems: "center", mt: 2 }}>
                 <Box
@@ -913,7 +894,7 @@ const HomePage = () => {
                     سارة أحمد
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    مشتري
+                    بائعة
                   </Typography>
                 </Box>
               </Box>
@@ -925,9 +906,8 @@ const HomePage = () => {
                 <Rating value={5} readOnly />
               </Box>
               <Typography variant="body1" paragraph>
-                "شاركت في عدة مزادات واستطعت الحصول على هاتف بسعر أقل بكثير من
-                سعر السوق. نظام المزادات ممتاز والمحفظة الإلكترونية تجعل العملية
-                آمنة وسهلة."
+                "اشتريت سماعة بلوتوث مستعملة وكانت زي ما وصفوها بالظبط. التوصيل
+                وصل في يومين بس، والموقع بيخلّيك مطمن وانت بتشتري."
               </Typography>
               <Box
                 sx={{
@@ -983,16 +963,6 @@ const HomePage = () => {
               <Typography variant="h6" paragraph sx={{ mb: 4 }}>
                 قم ببيعها الآن واحصل على أفضل سعر من خلال منصتنا
               </Typography>
-              {/* <Button
-                variant="contained"
-                color="primary"
-                size="large"
-                sx={{ px: 4, py: 1.5 }}
-                component={Link}
-                to="/sell"
-              >
-                بيع جهازك الآن
-              </Button> */}
             </Grid>
             <Grid item xs={12} md={5}>
               <Box

@@ -15,6 +15,8 @@ import {
   FormLabel,
   Select,
   MenuItem,
+  Checkbox,
+  Link,
 } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
 import axiosInstance from "../api/axiosInstance";
@@ -85,11 +87,17 @@ const RegisterPage = () => {
     is_seller: false,
     verificationCode: "",
   });
+  const [termsAccepted, setTermsAccepted] = useState(false); // حالة التيشك بوكس
 
   // دالة لتغيير قيم الحقول
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+  };
+
+  // دالة لتغيير حالة التيشك بوكس
+  const handleTermsChange = (e) => {
+    setTermsAccepted(e.target.checked);
   };
 
   // دالة لتغيير نوع الحساب (مشتري أو بائع)
@@ -197,6 +205,11 @@ const RegisterPage = () => {
         );
         return;
       }
+      // التحقق من الموافقة على الشروط والأحكام
+      if (!termsAccepted) {
+        toast.error("يجب الموافقة على الشروط والأحكام للمتابعة");
+        return;
+      }
       generateCodeMutation.mutate(formData.email);
     } else if (activeStep === 2) {
       if (!formData.verificationCode) {
@@ -281,7 +294,7 @@ const RegisterPage = () => {
                 <RadioGroup
                   row
                   name="account_type"
-                  value={formData.is_seller ? "sold" : "buyer"}
+                  value={formData.is_seller ? "seller" : "buyer"}
                   onChange={handleAccountTypeChange}
                 >
                   <FormControlLabel
@@ -371,6 +384,25 @@ const RegisterPage = () => {
                 value={formData.address_detail}
                 onChange={handleChange}
                 required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={termsAccepted}
+                    onChange={handleTermsChange}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Typography variant="body2">
+                    أوافق على{" "}
+                    <Link component={RouterLink} to="/terms">
+                      الشروط والأحكام
+                    </Link>
+                  </Typography>
+                }
               />
             </Grid>
           </Grid>
