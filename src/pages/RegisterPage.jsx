@@ -17,6 +17,8 @@ import {
   MenuItem,
   Checkbox,
   Link,
+  Modal,
+  Paper,
 } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
 import axiosInstance from "../api/axiosInstance";
@@ -63,11 +65,11 @@ const countryCodes = [
 
 const steps = ["المعلومات الشخصية", "معلومات الحساب", "التحقق"];
 
-// Regex لتأكيد كلمة المرور (8 أحرف على الأقل، حرف صغير، كبير، رقم، ورمز خاص)
+// Regex لتأكيد كلمة المرور
 const passwordRegex =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
 
-// Regex للتحقق من رقم الهاتف (10 أرقام لمصر، يمكن تخصيصه لدول أخرى)
+// Regex للتحقق من رقم الهاتف
 const phoneNumberRegex = /^\d{10}$/;
 
 const RegisterPage = () => {
@@ -79,7 +81,7 @@ const RegisterPage = () => {
     password: "",
     first_name: "",
     last_name: "",
-    country_code: "+20", // القيمة الافتراضية لمصر
+    country_code: "+20",
     phone_number: "",
     governorate: "",
     address_detail: "",
@@ -87,25 +89,26 @@ const RegisterPage = () => {
     is_seller: false,
     verificationCode: "",
   });
-  const [termsAccepted, setTermsAccepted] = useState(false); // حالة التيشك بوكس
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [openTermsModal, setOpenTermsModal] = useState(false); // حالة المودال
 
-  // دالة لتغيير قيم الحقول
+  // فتح وإغلاق المودال
+  const handleOpenTerms = () => setOpenTermsModal(true);
+  const handleCloseTerms = () => setOpenTermsModal(false);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
 
-  // دالة لتغيير حالة التيشك بوكس
   const handleTermsChange = (e) => {
     setTermsAccepted(e.target.checked);
   };
 
-  // دالة لتغيير نوع الحساب (مشتري أو بائع)
   const handleAccountTypeChange = (e) => {
     setFormData({ ...formData, is_seller: e.target.value === "seller" });
   };
 
-  // دمج المحافظة والعنوان عند الإرسال
   const getCombinedAddress = () => {
     const { governorate, address_detail } = formData;
     return governorate && address_detail
@@ -113,13 +116,11 @@ const RegisterPage = () => {
       : "";
   };
 
-  // دمج رمز الدولة ورقم الهاتف
   const getCombinedPhoneNumber = () => {
     const { country_code, phone_number } = formData;
     return country_code && phone_number ? `${country_code}${phone_number}` : "";
   };
 
-  // useMutation لإرسال طلب توليد كود التحقق
   const generateCodeMutation = useMutation({
     mutationFn: (email) => axiosInstance.post("/users/verification", { email }),
     onSuccess: () => {
@@ -133,7 +134,6 @@ const RegisterPage = () => {
     },
   });
 
-  // useMutation لإرسال بيانات التسجيل
   const registerMutation = useMutation({
     mutationFn: (data) => {
       const combinedAddress = getCombinedAddress();
@@ -181,7 +181,6 @@ const RegisterPage = () => {
         toast.error("يرجى ملء جميع الحقول المطلوبة");
         return;
       }
-      // التحقق من رقم الهاتف
       if (!phoneNumberRegex.test(formData.phone_number)) {
         toast.error("رقم الهاتف يجب أن يتكون من 10 أرقام");
         return;
@@ -198,14 +197,12 @@ const RegisterPage = () => {
         toast.error("يرجى ملء جميع الحقول المطلوبة");
         return;
       }
-      // التحقق من كلمة المرور بناءً على الباترن
       if (!passwordRegex.test(formData.password)) {
         toast.error(
           "كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل، وحرف صغير، وحرف كبير، ورقم، ورمز خاص (مثل !@#$%)"
         );
         return;
       }
-      // التحقق من الموافقة على الشروط والأحكام
       if (!termsAccepted) {
         toast.error("يجب الموافقة على الشروط والأحكام للمتابعة");
         return;
@@ -398,7 +395,7 @@ const RegisterPage = () => {
                 label={
                   <Typography variant="body2">
                     أوافق على{" "}
-                    <Link component={RouterLink} to="/terms">
+                    <Link component="button" onClick={handleOpenTerms}>
                       الشروط والأحكام
                     </Link>
                   </Typography>
@@ -468,6 +465,208 @@ const RegisterPage = () => {
           </>
         )}
       </Box>
+      {/* مودال الشروط والأحكام */}
+      <Modal open={openTermsModal} onClose={handleCloseTerms}>
+        <Paper
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: { xs: "90%", sm: 600 },
+            maxHeight: "80vh",
+            overflowY: "auto",
+            p: 4,
+            direction: "rtl",
+            textAlign: "right",
+          }}
+        >
+          <Typography variant="h5" gutterBottom>
+            الشروط والأحكام - SecondHand
+          </Typography>
+          <Typography variant="body1" paragraph>
+            مرحبًا بك في SecondHand، باستخدامك هذه المنصة فإنك توافق على الالتزام
+            بالشروط والأحكام التالية. يرجى قراءتها بعناية.
+          </Typography>
+
+          <Typography variant="h6" gutterBottom>
+            ١. التسجيل واستخدام الحساب
+          </Typography>
+          <Typography variant="body2" component="ul" sx={{ pl: 2 }}>
+            <li>يجب أن يكون المستخدم فوق 18 عامًا.</li>
+            <li>
+              يلتزم المستخدم بإدخال معلومات صحيحة أثناء التسجيل، بما في ذلك
+              البريد الإلكتروني ورقم الهاتف.
+            </li>
+            <li>
+              يحق للمستخدم تفعيل "وضع البائع" من ملفه الشخصي لعرض المنتجات
+              وبدء البيع.
+            </li>
+            <li>
+              يُمنع مشاركة الحساب مع أطراف أخرى، أو استخدامه لأغراض غير
+              قانونية.
+            </li>
+          </Typography>
+
+          <Typography variant="h6" gutterBottom>
+            ٢. عرض وشراء المنتجات
+          </Typography>
+          <Typography variant="body2" component="ul" sx={{ pl: 2 }}>
+            <li>
+              يُسمح بعرض المنتجات المستعملة فقط، ويجب أن تكون مطابقة للوصف
+              والصور المُرفقة.
+            </li>
+            <li>
+              جميع المنتجات تخضع لمراجعة فريق الجودة البشري قبل النشر.
+            </li>
+            <li>
+              يتحمّل البائع مسؤولية حالة المنتج وصحّة مواصفاته.
+            </li>
+            <li>
+              يحق للمنصة إزالة أي منتج مخالف دون إشعار مسبق.
+            </li>
+          </Typography>
+
+          <Typography variant="h6" gutterBottom>
+            ٣. المزادات
+          </Typography>
+          <Typography variant="body2" component="ul" sx={{ pl: 2 }}>
+            <li>
+              يمكن للمستخدمين المشاركة في المزادات بشرط وجود رصيد كافٍ في
+              المحفظة.
+            </li>
+            <li>يتم تجميد الرصيد عند المزايدة حتى انتهاء المزاد.</li>
+            <li>
+              يلتزم البائع بتحديد <em>سعر مبدئي</em> و<em>حد أدنى غير قابل
+              للإلغاء</em> (يجب ألا يتجاوز الضعف).
+            </li>
+            <li>
+              يمكن للبائع إلغاء المزاد إذا لم يصل إلى الحد الأدنى.
+            </li>
+            <li>تُخصم العمولة تلقائيًا بعد إتمام العملية.</li>
+          </Typography>
+
+          <Typography variant="h6" gutterBottom>
+            ٤. الدفع والسحب
+          </Typography>
+          <Typography variant="body2" component="ul" sx={{ pl: 2 }}>
+            <li>
+              طرق الدفع المتاحة: البطاقات البنكية (فيزا/ماستر) والمحافظ
+              الإلكترونية.
+            </li>
+            <li>
+              يمكن للمستخدم سحب الأرباح من المحفظة بعد إتمام عمليات البيع.
+            </li>
+            <li>
+              جميع عمليات الدفع والتسوية تتم عبر نظام آمن يضمن حماية بيانات
+              الدفع.
+            </li>
+          </Typography>
+
+          <Typography variant="h6" gutterBottom>
+            ٥. الرسائل والمحادثات
+          </Typography>
+          <Typography variant="body2" component="ul" sx={{ pl: 2 }}>
+            <li>يوفّر الموقع نظام محادثة مباشر بين البائع والمشتري.</li>
+            <li>
+              يُمنع إرسال رسائل تتضمن إعلانات أو محتوى مسيء أو روابط خارجية.
+            </li>
+            <li>
+              في حال ورود بلاغ بشأن محادثة، يحق للإدارة الاطلاع على الرسائل
+              بين الأطراف للتحقق من صحة البلاغ واتخاذ الإجراء المناسب.
+            </li>
+          </Typography>
+
+          <Typography variant="h6" gutterBottom>
+            ٦. الصلاحيات والمسؤوليات
+          </Typography>
+          <Typography variant="body2" component="ul" sx={{ pl: 2 }}>
+            <li>
+              تُعرض واجهة واحدة لجميع المستخدمين لكن يُفعّل لكل مستخدم
+              صلاحياته الخاصة تلقائيًا.
+            </li>
+            <li>
+              لا تتحمل المنصة مسؤولية أي تعاملات خارجية تمت خارج النظام الرسمي.
+            </li>
+            <li>
+              الإدارة غير مسؤولة عن تلف المنتج بعد إتمام الاستلام، ويُنصح
+              بفحصه عند الاستلام.
+            </li>
+          </Typography>
+
+          <Typography variant="h6" gutterBottom>
+            ٧. سياسات الإلغاء والاسترجاع
+          </Typography>
+          <Typography variant="body2" component="ul" sx={{ pl: 2 }}>
+            <li>
+              لا يمكن استرجاع المنتج بعد بيعه إلا في حال الاتفاق بين الطرفين.
+            </li>
+            <li>
+              المزادات غير قابلة للاسترجاع بعد انتهاء الوقت، إلا إذا تم
+              الإلغاء قبل الوصول إلى الحد الأدنى.
+            </li>
+          </Typography>
+
+          <Typography variant="h6" gutterBottom>
+            ٨. التقييمات والإبلاغات
+          </Typography>
+          <Typography variant="body2" component="ul" sx={{ pl: 2 }}>
+            <li>يمكن للمستخدمين تقييم بعضهم البعض بعد المعاملة.</li>
+            <li>
+              يحق لأي مستخدم الإبلاغ عن منتجات أو مستخدمين أو رسائل مسيئة.
+            </li>
+            <li>
+              <em>
+                في حالة وجود بلاغ رسمي، يحتفظ المدير بحق الاطلاع على
+                المحادثات بين المستخدمين
+              </em>{" "}
+              للتحقيق في الانتهاكات.
+            </li>
+            <li>
+              يتم التعامل مع المخالفات بناءً على شدة المخالفة وقد تصل العقوبة
+              إلى الحظر الدائم.
+            </li>
+          </Typography>
+
+          <Typography variant="h6" gutterBottom>
+            ٩. حماية البيانات والخصوصية
+          </Typography>
+          <Typography variant="body2" component="ul" sx={{ pl: 2 }}>
+            <li>
+              تلتزم المنصة بالحفاظ على سرية بيانات المستخدمين وعدم مشاركتها مع
+              أطراف ثالثة دون إذن.
+            </li>
+            <li>
+              يتم تشفير كلمات المرور والبيانات الحساسة لحماية الحسابات.
+            </li>
+            <li>
+              يمكن للمستخدم حذف حسابه وبياناته نهائيًا من خلال طلب رسمي.
+            </li>
+          </Typography>
+
+          <Typography variant="h6" gutterBottom>
+            ١٠. أحكام عامة
+          </Typography>
+          <Typography variant="body2" component="ul" sx={{ pl: 2 }}>
+            <li>
+              تحتفظ المنصة بحق تعديل الشروط والأحكام في أي وقت.
+            </li>
+            <li>
+              باستخدامك للمنصة، فإنك توافق على أي تحديثات تُنشر في صفحة
+              الشروط والأحكام.
+            </li>
+            <li>
+              تُطبق القوانين المصرية على جميع الأنشطة داخل المنصة.
+            </li>
+          </Typography>
+
+          <Box sx={{ mt: 2, textAlign: "center" }}>
+            <Button variant="contained" onClick={handleCloseTerms}>
+              إغلاق
+            </Button>
+          </Box>
+        </Paper>
+      </Modal>
     </Box>
   );
 };
