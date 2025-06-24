@@ -407,9 +407,6 @@ const ProductCardComponent = ({
               >
                 <VisibilityIcon />
               </IconButton>
-              <IconButton aria-label="add to favorites" size="small">
-                <FavoriteBorder />
-              </IconButton>
             </Box>
           </>
         )}

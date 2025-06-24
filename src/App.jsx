@@ -46,7 +46,7 @@ let theme = createTheme({
   palette: {
     mode: "light",
     primary: {
-      main: "#000", // Orange color similar to the image
+      main: "#ea850a", // Orange color similar to the image
     },
     secondary: {
       main: "#333",

@@ -61,6 +61,7 @@ import { getUserID } from "../utils/checkUser.js";
 import ReportDialog from "../components/ReportDialog";
 import axiosInstance from "../api/axiosInstance";
 import { toast } from "react-hot-toast";
+import { fetchWalletInfo } from "../api/walletApi.js";
 
 const AuctionDetailsPage = () => {
   const { id } = useParams();
@@ -121,6 +122,14 @@ const AuctionDetailsPage = () => {
       }
     },
   });
+
+  const { data: walletData } = useQuery({
+    queryKey: ["wallet"],
+    queryFn: fetchWalletInfo,
+  });
+
+  // رصيد المحفطة
+  const wallet_balance = walletData.data.wallet_balance;
 
   // إلغاء مزايدة
   const cancelBidMutation = useMutation({
@@ -319,6 +328,16 @@ const AuctionDetailsPage = () => {
     if (!endTime) return "";
     const endDate = new Date(endTime);
     return format(endDate, "dd MMMM yyyy, HH:mm", { locale: arEG });
+  };
+
+  const formatBidderName = (username) => {
+    if (!username) return "م*م**"; // الافتراضي إذا لم يكن هناك اسم
+    const words = username.trim().split(/\s+/); // تقسيم الاسم إلى كلمات
+    const initials = words
+      .slice(0, 1) // نأخذ أول كلمتين فقط
+      .map((word) => word.charAt(0) + "*****") // الحرف الأول + نجوم
+      .join(" "); // دمجهم بمسافة
+    return initials;
   };
 
   // التحقق مما إذا كان المستخدم الحالي قد قدم مزايدة
@@ -554,7 +573,7 @@ const AuctionDetailsPage = () => {
                     الفئة
                   </Typography>
                   <Typography variant="body1" fontWeight="medium">
-                    {auction.main_category_id}
+                    {auction.main_category_name}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
@@ -661,11 +680,15 @@ const AuctionDetailsPage = () => {
                           </Avatar>
                         </ListItemAvatar>
                         <ListItemText
-                          primary={bid.bidder_username || "مستخدم"}
+                          primary={formatBidderName(
+                            bid.bidder_username || "مستخدم"
+                          )} // تطبيق التنسيق
                           secondary={format(
                             new Date(bid.bid_time),
                             "dd MMMM yyyy, HH:mm",
-                            { locale: arEG }
+                            {
+                              locale: arEG,
+                            }
                           )}
                         />
                         {!isAuctionActive(auction.auction_end_time) &&
@@ -917,6 +940,15 @@ const AuctionDetailsPage = () => {
       <Dialog open={openBidDialog} onClose={handleCloseBidDialog}>
         <DialogTitle>تقديم مزايدة</DialogTitle>
         <DialogContent>
+          <DialogContentText
+            sx={{
+              fontWeight: 900,
+              mb: 1,
+            }}
+            color={"error"}
+          >
+            رصيدك الحالى : {parseInt(wallet_balance)}
+          </DialogContentText>
           <DialogContentText sx={{ mb: 2 }}>
             يرجى إدخال قيمة المزايدة. الحد الأدنى للمزايدة هو{" "}
             {calculateMinimumBid()} ج.م
