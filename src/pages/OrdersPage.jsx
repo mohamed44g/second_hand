@@ -32,6 +32,7 @@ import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchUserOrders, cancelOrder } from "../api/orderApi";
 import { orders as fakeOrder } from "../data/fakedata";
+import axiosInstance from "../api/axiosInstance";
 
 const OrdersPage = () => {
   const [openCancelDialog, setOpenCancelDialog] = useState(false);
@@ -48,8 +49,6 @@ const OrdersPage = () => {
     queryKey: ["userOrders"],
     queryFn: fetchUserOrders,
   });
-
-
 
   // استخراج بيانات الطلبات
   const orders = ordersData?.data || fakeOrder;
@@ -97,8 +96,6 @@ const OrdersPage = () => {
         return <Chip label={status} variant="outlined" />;
     }
   };
-
-  console.log("Orders:", orders);
 
   return (
     <Container maxWidth="lg" sx={{ py: 6 }}>
@@ -154,10 +151,7 @@ const OrdersPage = () => {
                     <Grid item xs={12} sm={3} md={2}>
                       <CardMedia
                         component="img"
-                        image={
-                          order.image_url ||
-                          "/placeholder.svg?height=150&width=150"
-                        }
+                        image={`${axiosInstance.defaults.baseURL}/${order.image_url}`}
                         alt={order.name}
                         sx={{
                           width: "100%",

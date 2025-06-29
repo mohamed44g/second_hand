@@ -87,7 +87,7 @@ const MyProductsPage = () => {
       toast.success("تم إنشاء الإعلان المدفوع بنجاح!");
     },
     onError: (error) => {
-      toast.error(`حدث خطأ أثناء إنشاء الإعلان: ${error.message}`);
+      toast.error(error.response.data.message);
     },
   });
 
@@ -170,6 +170,7 @@ const MyProductsPage = () => {
 
   // استخراج المنتجات من البيانات
   const products = productsData?.data || [];
+  console.log(products);
 
   // تصفية المنتجات حسب التبويب المحدد
   const filteredProducts = products.filter((product) => {
@@ -178,8 +179,6 @@ const MyProductsPage = () => {
     if (tabValue === 2) return product.is_auction; // Auctions
     return true;
   });
-
-
 
   return (
     <Container maxWidth="lg" sx={{ py: 6 }}>

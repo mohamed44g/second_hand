@@ -129,7 +129,7 @@ const AuctionDetailsPage = () => {
   });
 
   // رصيد المحفطة
-  const wallet_balance = walletData.data.wallet_balance;
+  const wallet_balance = walletData?.data?.wallet_balance;
 
   // إلغاء مزايدة
   const cancelBidMutation = useMutation({

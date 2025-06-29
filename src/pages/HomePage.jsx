@@ -38,13 +38,13 @@ import "slick-carousel/slick/slick-theme.css";
 
 // Styled components
 const HeroSection = styled(Box)(({ theme }) => ({
-  height: "120vh",
+  height: "105vh",
   color: "white",
   textAlign: "center",
   position: "relative",
   "& .slick-slide img": {
     width: "100%",
-    height: "120vh",
+    height: "105vh",
     objectFit: "cover",
   },
 }));
@@ -382,7 +382,7 @@ const HomePage = () => {
                   variant="outlined"
                   color="inherit"
                   component={Link}
-                  to="/category/6"
+                  to="/category/1"
                   sx={{ borderColor: "white", color: "white" }}
                 >
                   تصفح الهواتف
@@ -437,7 +437,7 @@ const HomePage = () => {
                   variant="outlined"
                   color="inherit"
                   component={Link}
-                  to="/category/7"
+                  to="/category/2"
                   sx={{ borderColor: "white", color: "white" }}
                 >
                   تصفح اللابتوب
@@ -492,7 +492,7 @@ const HomePage = () => {
                   variant="outlined"
                   color="inherit"
                   component={Link}
-                  to="/category/8"
+                  to="/category/3"
                   sx={{ borderColor: "white", color: "white" }}
                 >
                   تصفح الاكسسوارات

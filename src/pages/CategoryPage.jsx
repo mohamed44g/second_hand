@@ -71,7 +71,7 @@ const CategoryPage = () => {
   const products = productsData?.data || [];
   const categories = categoriesData?.data?.mainCategories || [];
   const subcategories = categoriesData?.data?.subCategories || [];
-
+  console.log("products", products);
   // الحصول على اسم الفئة والفئة الفرعية
   const categoryName =
     categories.find((cat) => cat.main_category_id === Number(categoryId))
@@ -266,6 +266,7 @@ const CategoryPage = () => {
                 device={product}
                 isMyProductsPage={false}
                 isAuctionsPage={false}
+                
               />
             </Grid>
           ))}

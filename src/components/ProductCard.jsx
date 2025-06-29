@@ -390,7 +390,11 @@ const ProductCardComponent = ({
               size="small"
               startIcon={<ShoppingCart />}
               component={Link}
-              to={`/product/${device.device_id}`}
+              to={
+                device.is_auction
+                  ? `/auction/${device.bid_id || device.device_id}`
+                  : `/product/${device.device_id}`
+              }
             >
               عرض المنتج
             </Button>

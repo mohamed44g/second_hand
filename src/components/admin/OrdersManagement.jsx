@@ -175,8 +175,9 @@ const OrdersManagement = () => {
     try {
       setIsLoading(true);
       const response = await cancelOrder(selectedOrder.order_id);
+      console.log(response);
 
-      if (response.data.status === "success") {
+      if (response.status === "success") {
         setOrders(
           orders.map((order) =>
             order.order_id === selectedOrder.order_id
