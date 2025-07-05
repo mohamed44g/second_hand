@@ -19,6 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { fetchSellerDevices } from "../../api/sellerApi";
 import axiosInstance from "../../api/axiosInstance";
+import ProdectCard from "../ProductCard";
 
 const SellerProducts = ({ sellerId }) => {
   const { data: products } = useQuery({
@@ -41,7 +42,7 @@ const SellerProducts = ({ sellerId }) => {
         <Grid container spacing={3}>
           {products?.data?.map((product) => (
             <Grid item xs={12} sm={6} md={4} lg={3} key={product.device_id}>
-              <Card
+              {/* <Card
                 sx={{
                   height: "100%",
                   display: "flex",
@@ -105,7 +106,15 @@ const SellerProducts = ({ sellerId }) => {
                     {new Date(product.created_at).toLocaleDateString("ar-EG")}
                   </Typography>
                 </CardActions>
-              </Card>
+              </Card> */}
+              <ProdectCard
+                device={product}
+                isAuctionsPage={false}
+                isMyProductsPage={false}
+                onDelete={() => {}}
+                onEdit={() => {}}
+                onPromote={() => {}}
+              />
             </Grid>
           ))}
         </Grid>

@@ -51,11 +51,8 @@ export const fetchPendingProducts = async () => {
 };
 
 // تحديث حالة المنتج (قبول/رفض)
-export const updateProductStatus = async (deviceId, status, rejectReason) => {
+export const updateProductStatus = async (deviceId, status) => {
   const payload = { status };
-  if (status === "rejected" && rejectReason) {
-    payload.reject_reason = rejectReason;
-  }
   const response = await axiosInstance.patch(`/products/${deviceId}`, payload);
   return response.data;
 };
